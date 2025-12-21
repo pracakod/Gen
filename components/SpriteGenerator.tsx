@@ -173,18 +173,20 @@ export const SpriteGenerator: React.FC = () => {
     // Buduj pełny prompt dla konkretnego kierunku lub arkusza
     const buildPrompt = (directionAngle: string) => {
         const base = getBasePrompt();
+        const fitInFrame = "entire character must be fully visible and centered in frame, not cut off, whole body shown";
+        const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
         const bgPrompt = autoRemoveBg
             ? "on pure white background, isolated on white, cut out, empty background"
-            : "on solid pure neon green background #00FF00";
+            : "on solid pure neon green background #00FF00, flat color background, no shadows on background";
 
         if (genMode === 'sheet') {
             const selectedLabels = selectedDirections.map(id => DIRECTIONS.find(d => d.id === id)?.label).join(', ');
             const allInOneNote = "COMPOSITE IMAGE, ALL VIEW ANGLES SHOWN TOGETHER ON ONE SINGLE IMAGE,";
-            return `SPRITE SHEET, ${allInOneNote} ${base}, multiple views including: ${selectedLabels}, character shown from different angles in a grid, full body, centered, ${styleConfig.artStyle}, ${bgPrompt}, high quality game asset, NO TEXT, ${styleConfig.negative}`;
+            return `SPRITE SHEET, ${allInOneNote} ${base}, multiple views including: ${selectedLabels}, character shown from different angles in a grid, ${fitInFrame}, ${cleanEdges}, ${styleConfig.artStyle}, ${bgPrompt}, high quality game asset, NO TEXT, ${styleConfig.negative}`;
         }
 
-        return `${base}, ${directionAngle}, full body, centered, single character, ${styleConfig.artStyle}, ${bgPrompt}, NO TEXT, ${styleConfig.negative}`;
+        return `${base}, ${directionAngle}, ${fitInFrame}, ${cleanEdges}, single character, ${styleConfig.artStyle}, ${bgPrompt}, NO TEXT, ${styleConfig.negative}`;
     };
 
     // Generuj

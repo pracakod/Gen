@@ -6,6 +6,24 @@ import { PromptDisplay } from './PromptDisplay';
 import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
+const PET_TAGS = {
+    diablo: {
+        species: ['Kruk', 'Wilk', 'Wąż', 'Pająk', 'Mały Demon', 'Chowaniec'],
+        element: ['Cień', 'Ogień', 'Krew', 'Kość', 'Eteryczny'],
+        size: ['Malutki', 'Mały', 'Średni']
+    },
+    cyberpunk: {
+        species: ['Dron', 'Robo-kot', 'Robo-pies', 'Hologram', 'Cyber-ptak'],
+        element: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny'],
+        size: ['Kieszonkowy', 'Kompaktowy', 'Standardowy']
+    },
+    pixelart: {
+        species: ['Slime', 'Szkielet', 'Kot', 'Ptak', 'Duszek'],
+        element: ['Ognisty', 'Lodowy', 'Magiczny', 'Latający'],
+        size: ['1-slot', '2-slot', '3-slot']
+    }
+};
+
 interface Result {
     id: string;
     url: string;
@@ -32,6 +50,18 @@ export const PetGenerator: React.FC = () => {
         return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
     });
 
+    const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+    });
+
+    const toggleTag = (category: string, value: string) => {
+        setSelectedTags(prev => ({
+            ...prev,
+            [category]: prev[category] === value ? '' : value
+        }));
+    };
+
     // Load from local storage (per style)
     const [results, setResults] = useState<Result[]>(() => {
         const saved = localStorage.getItem(storageKey);
@@ -45,8 +75,9 @@ export const PetGenerator: React.FC = () => {
 
     // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model }));
-    }, [autoRemoveBg, model, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
+    }, [autoRemoveBg, model, selectedTags, settingsKey]);
+
 
     // Reload when style changes
     React.useEffect(() => {
@@ -61,10 +92,20 @@ export const PetGenerator: React.FC = () => {
     };
 
     const getFullPrompt = () => {
+        const parts = [getPetPrefix()];
+        if (selectedTags.species) parts.push(selectedTags.species);
+        if (selectedTags.element) parts.push(selectedTags.element);
+        if (selectedTags.size) parts.push(selectedTags.size);
+        if (prompt) parts.push(prompt);
+
+        const baseText = parts.join(', ');
+        const fitInFrame = "small creature, must be centered and fully visible within frame, not cut off, whole body visible";
+        const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
+
         if (autoRemoveBg) {
-            return `${getPetPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `${getPetPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
+        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {
@@ -152,12 +193,36 @@ export const PetGenerator: React.FC = () => {
                         <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
                     </select>
                 </div>
+                <div className="space-y-4 mb-4">
+                    {Object.entries(PET_TAGS[currentStyle as keyof typeof PET_TAGS]).map(([category, values]) => (
+                        <div key={category}>
+                            <label className="text-stone-500 text-[9px] uppercase mb-1 block">
+                                {category === 'species' ? 'Gatunek' : category === 'element' ? 'Atrybut' : 'Rozmiar'}
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                                {values.map(val => (
+                                    <button
+                                        key={val}
+                                        onClick={() => toggleTag(category, val)}
+                                        className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
+                                            ? 'bg-teal-900/40 border-teal-600 text-teal-200'
+                                            : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                            }`}
+                                    >
+                                        {val}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
                 <input
                     type="text"
                     value={prompt}
                     onChange={e => setPrompt(e.target.value)}
                     placeholder={getPlaceholder()}
-                    className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none"
+                    className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none focus:border-teal-900"
                 />
                 <div className="mb-4">
                     <PromptDisplay label="Wezwanie" text={getFullPrompt()} colorClass="text-teal-900" />

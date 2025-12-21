@@ -5,6 +5,24 @@ import { PromptDisplay } from './PromptDisplay';
 import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
+const ITEM_TAGS = {
+  diablo: {
+    type: ['Broń', 'Pancerz', 'Tarcza', 'Amulet', 'Pierścień', 'Mikstura', 'Księga'],
+    material: ['Żelazo', 'Złoto', 'Obsydian', 'Kość', 'Eteryczny', 'Kryształ'],
+    rarity: ['Zwykły', 'Magiczny', 'Unikalny', 'Setowy', 'Starożytny']
+  },
+  cyberpunk: {
+    type: ['Pistolet', 'Karabin', 'Implant', 'Chip', 'Gogle', 'Pancerz'],
+    material: ['Chrom', 'Polimer', 'Grafen', 'Plastik', 'Neopunk'],
+    rarity: ['Common', 'Rare', 'Epic', 'Legendary', 'Iconic']
+  },
+  pixelart: {
+    type: ['Miecz', 'Laska', 'Hełm', 'Buty', 'Zwój', 'Klucz'],
+    material: ['Drewno', 'Stal', 'Srebro', 'Marmur', 'Pikselowy'],
+    rarity: ['Biały', 'Zielony', 'Niebieski', 'Fioletowy', 'Pomarańczowy']
+  }
+};
+
 // ...
 
 interface Result {
@@ -37,6 +55,18 @@ export const ItemGenerator: React.FC = () => {
     return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
   });
 
+  const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+  });
+
+  const toggleTag = (category: string, value: string) => {
+    setSelectedTags(prev => ({
+      ...prev,
+      [category]: prev[category] === value ? '' : value
+    }));
+  };
+
   // Load from local storage (per style)
   const [results, setResults] = useState<Result[]>(() => {
     const saved = localStorage.getItem(storageKey);
@@ -50,10 +80,11 @@ export const ItemGenerator: React.FC = () => {
     localStorage.setItem(storageKey, JSON.stringify(results));
   }, [results, storageKey]);
 
+
   // Save settings
   React.useEffect(() => {
-    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, itemType }));
-  }, [autoRemoveBg, model, itemType, settingsKey]);
+    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
+  }, [autoRemoveBg, model, selectedTags, settingsKey]);
 
   // Reload when style changes
   React.useEffect(() => {
@@ -68,10 +99,20 @@ export const ItemGenerator: React.FC = () => {
   };
 
   const getFullPrompt = () => {
+    const parts = [getItemPrefix()];
+    if (selectedTags.type) parts.push(selectedTags.type);
+    if (selectedTags.material) parts.push(selectedTags.material);
+    if (selectedTags.rarity) parts.push(selectedTags.rarity);
+    if (prompt) parts.push(prompt);
+
+    const baseText = parts.join(', ');
+    const fitInFrame = "single item, object must be centered and fully visible in frame, not cut off, isolated, macro shot";
+    const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between object and background";
+
     if (autoRemoveBg) {
-      return `${getItemPrefix()}, ${itemType}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
+      return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
     }
-    return `${getItemPrefix()}, ${itemType}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
+    return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
   };
 
   const getPlaceholder = () => {
@@ -150,7 +191,7 @@ export const ItemGenerator: React.FC = () => {
       setResults(prev => [{
         id: Math.random().toString(36),
         url,
-        type: itemType,
+        type: selectedTags.type || 'Item',
         status: 'success',
         modelUsed,
         originalUrl: url
@@ -180,22 +221,35 @@ export const ItemGenerator: React.FC = () => {
                 Przezroczyste Tło
               </label>
             </div>
-            <select
-              value={itemType}
-              onChange={(e) => setItemType(e.target.value)}
-              className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none"
-            >
-              <option value="Weapon">Broń</option>
-              <option value="Armor">Pancerz</option>
-              <option value="Amulet">Amulet</option>
-              <option value="Ring">Pierścień</option>
-              <option value="Artifact">Artefakt</option>
-            </select>
             <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
               <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
               <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
             </select>
           </div>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          {Object.entries(ITEM_TAGS[currentStyle as keyof typeof ITEM_TAGS]).map(([category, values]) => (
+            <div key={category}>
+              <label className="text-stone-500 text-[9px] uppercase mb-1 block">
+                {category === 'type' ? 'Typ' : category === 'material' ? 'Materiał' : 'Rzadkość'}
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {values.map(val => (
+                  <button
+                    key={val}
+                    onClick={() => toggleTag(category, val)}
+                    className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
+                      ? 'bg-amber-900/40 border-amber-600 text-amber-200'
+                      : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                      }`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         <textarea

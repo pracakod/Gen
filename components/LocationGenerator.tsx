@@ -5,6 +5,24 @@ import { PromptDisplay } from './PromptDisplay';
 import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
+const LOCATION_TAGS = {
+    diablo: {
+        biome: ['Katedra', 'Podziemia', 'Cmentarz', 'Pustynia', 'Bagna', 'Góry'],
+        atmosphere: ['Mroczna', 'Krwawa', 'Mglista', 'Gotycka', 'Piekielna'],
+        time: ['Noc', 'Zmierzch', 'Burza', 'Eteryczny blask']
+    },
+    cyberpunk: {
+        biome: ['Rynek', 'Zaułek', 'Klub', 'Megastruktura', 'Autostrada', 'Slumsy'],
+        atmosphere: ['Neonowa', 'Deszczowa', 'Brudna', 'Szybka', 'Retro-futuro'],
+        time: ['Noc (Neon)', 'Deszczowa noc', 'Zanieczyszczony świt']
+    },
+    pixelart: {
+        biome: ['Las', 'Zamek', 'Wioska', 'Jaskinia', 'Wulkan'],
+        atmosphere: ['Retro', 'Kolorowa', 'Niebezpieczna', 'Spokojna'],
+        time: ['Dzień', 'Zachód słońca', 'Noc (Pikselowa)']
+    }
+};
+
 interface Result {
     id: string;
     url: string;
@@ -42,10 +60,22 @@ export const LocationGenerator: React.FC = () => {
         localStorage.setItem(storageKey, JSON.stringify(results));
     }, [results, storageKey]);
 
+    const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+    });
+
+    const toggleTag = (category: string, value: string) => {
+        setSelectedTags(prev => ({
+            ...prev,
+            [category]: prev[category] === value ? '' : value
+        }));
+    };
+
     // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model }));
-    }, [autoRemoveBg, model, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
+    }, [autoRemoveBg, model, selectedTags, settingsKey]);
 
     // Reload when style changes
     React.useEffect(() => {
@@ -60,10 +90,19 @@ export const LocationGenerator: React.FC = () => {
     };
 
     const getFullPrompt = () => {
+        const parts = [getLocationPrefix()];
+        if (selectedTags.biome) parts.push(selectedTags.biome);
+        if (selectedTags.atmosphere) parts.push(selectedTags.atmosphere);
+        if (selectedTags.time) parts.push(selectedTags.time);
+        if (prompt) parts.push(prompt);
+
+        const baseText = parts.join(', ');
+        const cleanEdges = "NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING"; // Lokacje czasem chcą mgeł, ale user chciał "bez mgieł dla łatwiejszego wycinania"
+
         if (autoRemoveBg) {
-            return `${getLocationPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `${getLocationPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, NO TEXT, ${styleConfig.negative}`;
+        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {
@@ -155,6 +194,30 @@ export const LocationGenerator: React.FC = () => {
                         <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
                     </select>
                 </div>
+                <div className="space-y-4 mb-4">
+                    {Object.entries(LOCATION_TAGS[currentStyle as keyof typeof LOCATION_TAGS]).map(([category, values]) => (
+                        <div key={category}>
+                            <label className="text-stone-500 text-[9px] uppercase mb-1 block">
+                                {category === 'biome' ? 'Region' : category === 'atmosphere' ? 'Klimat' : 'Pora/Oświetlenie'}
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                                {values.map(val => (
+                                    <button
+                                        key={val}
+                                        onClick={() => toggleTag(category, val)}
+                                        className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
+                                            ? 'bg-stone-700 border-stone-500 text-stone-100'
+                                            : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                            }`}
+                                    >
+                                        {val}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
                 <div className="flex flex-col gap-4">
                     <textarea
                         value={prompt}
