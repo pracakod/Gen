@@ -74,6 +74,12 @@ export const MonsterGenerator: React.FC = () => {
         return 'np. Demon ognia z rogami...';
     };
 
+    const getButtonText = () => {
+        if (currentStyle === 'cyberpunk') return 'Aktywuj Zagrożenie';
+        if (currentStyle === 'pixelart') return 'Spawn Enemy';
+        return 'Przyzwij Bestię';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -162,7 +168,7 @@ export const MonsterGenerator: React.FC = () => {
                 <div className="mb-4">
                     <PromptDisplay label="Zaklęcie" text={getFullPrompt()} colorClass="text-red-900" />
                 </div>
-                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full text-red-500 border-red-900 hover:bg-red-900/20">Przyzwij Bestię</DiabloButton>
+                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full text-red-500 border-red-900 hover:bg-red-900/20">{getButtonText()}</DiabloButton>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {results.map(r => (

@@ -73,6 +73,12 @@ export const MountGenerator: React.FC = () => {
         return 'np. Koń w zbroi z kości...';
     };
 
+    const getButtonText = () => {
+        if (currentStyle === 'cyberpunk') return 'Przekaż Pojazd';
+        if (currentStyle === 'pixelart') return 'Stwórz Mount';
+        return 'Otwórz Stajnię';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -156,7 +162,7 @@ export const MountGenerator: React.FC = () => {
                 <div className="mb-4">
                     <PromptDisplay label="Rozkaz" text={getFullPrompt()} colorClass="text-orange-900" />
                 </div>
-                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">Otwórz Stajnię</DiabloButton>
+                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {results.map((res) => (

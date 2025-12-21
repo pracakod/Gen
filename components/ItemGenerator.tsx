@@ -80,6 +80,12 @@ export const ItemGenerator: React.FC = () => {
     return 'np. Ostrze z obsydianu płonące niebieskim ogniem...';
   };
 
+  const getButtonText = () => {
+    if (currentStyle === 'cyberpunk') return 'Wyprodukuj Sprzęt';
+    if (currentStyle === 'pixelart') return 'Stwórz Item';
+    return 'Wykuj Przedmiot';
+  };
+
   const processRemoveBg = async (imageUrl: string) => {
     return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
   };
@@ -205,7 +211,7 @@ export const ItemGenerator: React.FC = () => {
 
         {error && <p className="text-red-600 text-[10px] mb-4 text-center uppercase font-serif">{error}</p>}
 
-        <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">Wykuj Przedmiot</DiabloButton>
+        <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

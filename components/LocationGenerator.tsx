@@ -73,6 +73,12 @@ export const LocationGenerator: React.FC = () => {
         return 'np. Katedra Tristram w płomieniach...';
     };
 
+    const getButtonText = () => {
+        if (currentStyle === 'cyberpunk') return 'Skanuj Lokację';
+        if (currentStyle === 'pixelart') return 'Generuj Mapę';
+        return 'Wizualizuj';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -160,7 +166,7 @@ export const LocationGenerator: React.FC = () => {
                     <div className="mb-2">
                         <PromptDisplay label="Wizja" text={getFullPrompt()} colorClass="text-stone-500" />
                     </div>
-                    <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">Wizualizuj</DiabloButton>
+                    <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
                 </div>
             </div>
 

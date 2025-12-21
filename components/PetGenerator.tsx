@@ -73,6 +73,12 @@ export const PetGenerator: React.FC = () => {
         return 'np. Mały goblin skarbnik...';
     };
 
+    const getButtonText = () => {
+        if (currentStyle === 'cyberpunk') return 'Aktywuj Drona';
+        if (currentStyle === 'pixelart') return 'Stwórz Peta';
+        return 'Przyzwij';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -156,7 +162,7 @@ export const PetGenerator: React.FC = () => {
                 <div className="mb-4">
                     <PromptDisplay label="Wezwanie" text={getFullPrompt()} colorClass="text-teal-900" />
                 </div>
-                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">Przyzwij</DiabloButton>
+                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {results.map((res) => (

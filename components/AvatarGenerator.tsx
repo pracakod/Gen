@@ -84,6 +84,12 @@ export const AvatarGenerator: React.FC = () => {
     return 'np. Nekromanta w zbroi z kości...';
   };
 
+  const getButtonText = () => {
+    if (currentStyle === 'cyberpunk') return 'Uruchom Generator';
+    if (currentStyle === 'pixelart') return 'Renderuj Sprite';
+    return 'Otwórz Wrota';
+  };
+
   const processRemoveBg = async (imageUrl: string): Promise<string> => {
     return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
   };
@@ -256,7 +262,7 @@ export const AvatarGenerator: React.FC = () => {
 
         {error && <p className="text-red-600 text-[10px] mb-4 text-center uppercase font-serif">{error}</p>}
 
-        <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">Otwórz Wrota</DiabloButton>
+        <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
