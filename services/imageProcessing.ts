@@ -1,5 +1,5 @@
 
-export const removeBackground = async (imageUrl: string, mode: 'white' | 'green'): Promise<string> => {
+export const removeBackground = async (imageUrl: string, mode: 'white' | 'green' | 'black'): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -22,9 +22,14 @@ export const removeBackground = async (imageUrl: string, mode: 'white' | 'green'
                     if (r > 220 && g > 220 && b > 220) {
                         data.data[i + 3] = 0;
                     }
-                } else {
+                } else if (mode === 'green') {
                     // Green screen detection - improved to be more selective
                     if (g > 100 && g > r * 1.1 && g > b * 1.1) {
+                        data.data[i + 3] = 0;
+                    }
+                } else if (mode === 'black') {
+                    // Black background removal
+                    if (r < 40 && g < 40 && b < 40) {
                         data.data[i + 3] = 0;
                     }
                 }
@@ -188,4 +193,29 @@ export const downloadImage = async (url: string, filename: string) => {
         console.error("Błąd pobierania:", e);
         window.open(url, '_blank');
     }
+};
+
+export const sliceSpriteSheet = async (imageUrl: string, rows: number, cols: number): Promise<string[]> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = imageUrl;
+        img.onload = () => {
+            const frames: string[] = [];
+            const fw = img.width / cols;
+            const fh = img.height / rows;
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = fw;
+                    canvas.height = fh;
+                    const ctx = canvas.getContext('2d')!;
+                    ctx.drawImage(img, x * fw, y * fh, fw, fh, 0, 0, fw, fh);
+                    frames.push(canvas.toDataURL());
+                }
+            }
+            resolve(frames);
+        };
+        img.onerror = reject;
+    });
 };

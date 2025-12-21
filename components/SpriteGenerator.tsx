@@ -3,7 +3,7 @@ import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
 import { useStyle } from '../contexts/StyleContext';
-import { removeBackground } from '../services/imageProcessing';
+import { removeBackground, sliceSpriteSheet, downloadImage } from '../services/imageProcessing';
 
 // Kierunki
 const DIRECTIONS = [
@@ -47,6 +47,8 @@ interface SpriteResult {
     direction: string;
     url: string;
     modelUsed?: string;
+    isRemovingBg?: boolean;
+    originalUrl?: string;
 }
 
 export const SpriteGenerator: React.FC = () => {
@@ -96,6 +98,7 @@ export const SpriteGenerator: React.FC = () => {
 
     const [loading, setLoading] = useState(false);
     const [currentDirection, setCurrentDirection] = useState<string | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Pobierz tagi dla aktualnego stylu
     const getCurrentTags = () => {
@@ -249,6 +252,54 @@ export const SpriteGenerator: React.FC = () => {
     // Usuń wynik
     const removeResult = (id: string) => {
         setResults(prev => prev.filter(r => r.id !== id));
+    };
+
+    const handleSlice = async (result: SpriteResult) => {
+        try {
+            setLoading(true);
+            const frames = await sliceSpriteSheet(result.url, 3, 3);
+            setResults(prev => [
+                ...frames.map((f, i) => ({
+                    id: `${result.id}_f${i}_${Date.now()}`,
+                    direction: `frame_${i + 1}`,
+                    url: f,
+                    modelUsed: result.modelUsed
+                })),
+                ...prev
+            ]);
+        } catch (e) {
+            console.error("Błąd cięcia:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const removeBlackBg = async (id: string) => {
+        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
+        const item = results.find(r => r.id === id);
+        if (!item) return;
+        try {
+            const newUrl = await removeBackground(item.url, 'black');
+            setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false, originalUrl: item.url } : r));
+        } catch (e) {
+            setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
+        }
+    };
+
+    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const url = event.target?.result as string;
+            setResults(prev => [{
+                id: `upload_${Date.now()}`,
+                direction: 'sheet',
+                url: url,
+                modelUsed: 'Wgrany Plik'
+            }, ...prev]);
+        };
+        reader.readAsDataURL(file);
     };
 
     // Wyczyść wszystko
@@ -540,6 +591,22 @@ export const SpriteGenerator: React.FC = () => {
                         Wyczyść wszystko
                     </button>
                 )}
+
+                <div className="mt-4 pt-4 border-t border-stone-800">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleUpload}
+                        className="hidden"
+                        accept="image/*"
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full bg-stone-800 text-stone-300 text-[9px] uppercase py-2 hover:bg-stone-700 transition-colors"
+                    >
+                        📂 Wgraj własny arkusz / obrazek
+                    </button>
+                </div>
             </div>
 
             {/* Wyniki */}
@@ -548,25 +615,46 @@ export const SpriteGenerator: React.FC = () => {
                     <h3 className="text-stone-500 text-[10px] uppercase mb-4">Wygenerowane Sprite'y ({results.length})</h3>
                     <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
                         {results.map(r => (
-                            <div key={r.id} className="relative group">
+                            <div key={r.id} className="relative group flex flex-col gap-1">
                                 <div className="aspect-square bg-black border border-stone-800 overflow-hidden bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)]">
-                                    <img src={r.url} alt={r.direction} className="w-full h-full object-contain" />
+                                    <img src={r.url} alt={r.direction} className={`w-full h-full object-contain transition-opacity ${r.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
+
+                                    {r.direction === 'sheet' && !r.isRemovingBg && (
+                                        <button
+                                            onClick={() => handleSlice(r)}
+                                            className="absolute inset-0 bg-amber-900/80 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity uppercase font-bold"
+                                        >
+                                            Tnij 3x3
+                                        </button>
+                                    )}
                                 </div>
-                                <span className="absolute bottom-0 left-0 right-0 bg-black/80 text-[8px] text-center text-stone-400 uppercase">
-                                    {r.direction}
-                                </span>
+                                <div className="flex flex-col gap-1 px-1 pb-1">
+                                    <span className="text-[7px] text-center text-stone-500 uppercase truncate">
+                                        {r.direction}
+                                    </span>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => removeBlackBg(r.id)}
+                                            disabled={r.isRemovingBg}
+                                            className="flex-1 bg-stone-900 text-stone-400 text-[8px] py-1 border border-stone-800 hover:text-white disabled:opacity-50"
+                                            title="Usuń czarne tło"
+                                        >
+                                            Wytnij
+                                        </button>
+                                        <button
+                                            onClick={() => downloadImage(r.url, `sprite_${r.direction}.png`)}
+                                            className="flex-1 bg-stone-900 text-stone-400 text-[8px] py-1 border border-stone-800 hover:text-white"
+                                            title="Pobierz PNG"
+                                        >
+                                            Zapisz
+                                        </button>
+                                    </div>
+                                </div>
                                 <button
                                     onClick={() => removeResult(r.id)}
                                     className="absolute top-0 right-0 bg-red-900/80 text-white text-[10px] px-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                     ×
-                                </button>
-                                <button
-                                    onClick={() => handleDownload(r.url, `sprite_${currentStyle}_${r.direction}.png`)}
-                                    className="absolute top-0 left-0 bg-stone-900/80 text-stone-300 text-[8px] px-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    title="Pobierz PNG"
-                                >
-                                    ↓
                                 </button>
                             </div>
                         ))}
