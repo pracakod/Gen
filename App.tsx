@@ -7,13 +7,11 @@ import { ItemGenerator } from './components/ItemGenerator';
 import { LocationGenerator } from './components/LocationGenerator';
 import { MonsterGenerator } from './components/MonsterGenerator';
 import { LoreGenerator } from './components/LoreGenerator';
-import { Laboratory } from './components/Laboratory';
-import { BackgroundRemover } from './components/BackgroundRemover';
 import { MountGenerator } from './components/MountGenerator';
 import { PetGenerator } from './components/PetGenerator';
-import { IconMaker } from './components/IconMaker';
+import { PhotoShop } from './components/PhotoShop';
 
-type Tab = 'characters' | 'items' | 'monsters' | 'mounts' | 'pets' | 'locations' | 'lore' | 'icon-maker' | 'cleaner' | 'lab';
+type Tab = 'characters' | 'items' | 'monsters' | 'mounts' | 'pets' | 'locations' | 'lore' | 'photoshop';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('characters');
@@ -28,9 +26,7 @@ const App: React.FC = () => {
       case 'pets': return currentStyle === 'cyberpunk' ? 'Drony & Boty' : currentStyle === 'pixelart' ? 'Towarzysze' : 'Mroczni Towarzysze';
       case 'locations': return currentStyle === 'cyberpunk' ? 'Night City Dzielnice' : currentStyle === 'pixelart' ? 'Mapy' : 'Architektura Grozy';
       case 'lore': return currentStyle === 'cyberpunk' ? 'Dane z Sieci' : currentStyle === 'pixelart' ? 'Legendy' : 'Kroniki Sanktuarium';
-      case 'icon-maker': return 'Warsztat Ikon UI';
-      case 'lab': return 'Laboratorium Hybrydowe';
-      case 'cleaner': return 'Oczyszczalnia';
+      case 'photoshop': return '🎨 PhotoSzopa';
     }
   };
 
@@ -43,9 +39,7 @@ const App: React.FC = () => {
       case 'pets': return currentStyle === 'cyberpunk' ? 'Drony bojowe i towarzysze AI.' : currentStyle === 'pixelart' ? 'Pixel-art towarzysze.' : 'Chowańce i zwierzęta.';
       case 'locations': return currentStyle === 'cyberpunk' ? 'Neonowe ulice i megabudynki.' : currentStyle === 'pixelart' ? 'Mapy i tła gry.' : 'Lochy i katedry.';
       case 'lore': return currentStyle === 'cyberpunk' ? 'Historia z sieci i plotki.' : currentStyle === 'pixelart' ? 'Opisy w stylu retro.' : 'Opisy, biografie i statystyki.';
-      case 'icon-maker': return 'Zmień zdjęcie w ikonę.';
-      case 'lab': return 'Łącz elementy.';
-      case 'cleaner': return 'Usuń tło.';
+      case 'photoshop': return 'Narzędzia graficzne: ikony, usuwanie tła, edycja, warstwy.';
     }
   };
 
@@ -140,11 +134,9 @@ const App: React.FC = () => {
           {navButton('monsters', currentStyle === 'cyberpunk' ? 'Wrogowie' : 'Potwory', navColors.monsters)}
           {navButton('locations', currentStyle === 'cyberpunk' ? 'Dzielnice' : 'Lokacje', navColors.locations)}
           {navButton('lore', currentStyle === 'cyberpunk' ? 'Dane' : 'Kroniki', navColors.lore)}
-          {navButton('icon-maker', 'Ikony', 'bg-amber-700/40 text-amber-100')}
           {navButton('mounts', currentStyle === 'cyberpunk' ? 'Pojazdy' : 'Wierzchowce', navColors.mounts)}
           {navButton('pets', currentStyle === 'cyberpunk' ? 'Drony' : 'Towarzysze', navColors.pets)}
-          {navButton('cleaner', 'Oczyszczalnia', 'bg-blue-900/40 text-blue-100')}
-          {navButton('lab', 'Laboratorium', 'bg-green-900/40 text-green-100')}
+          {navButton('photoshop', '📷 PhotoSzopa', 'bg-gradient-to-r from-amber-900/40 to-orange-900/40 text-amber-100')}
         </nav>
 
         <div className="min-h-[600px] bg-black/20 p-1">
@@ -165,9 +157,7 @@ const App: React.FC = () => {
             {activeTab === 'lore' && <LoreGenerator />}
             {activeTab === 'mounts' && <MountGenerator />}
             {activeTab === 'pets' && <PetGenerator />}
-            {activeTab === 'icon-maker' && <IconMaker />}
-            {activeTab === 'lab' && <Laboratory />}
-            {activeTab === 'cleaner' && <BackgroundRemover />}
+            {activeTab === 'photoshop' && <PhotoShop />}
           </section>
         </div>
       </main>
