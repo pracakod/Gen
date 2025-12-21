@@ -10,26 +10,22 @@ export const StyleSelector: React.FC = () => {
     const styles = Object.values(GAME_STYLES);
 
     return (
-        <div className="flex justify-center gap-2 mb-6">
+        <div className="flex flex-wrap justify-center gap-2 mb-6 max-w-4xl mx-auto">
             {styles.map((style) => (
                 <button
                     key={style.id}
                     onClick={() => setStyle(style.id)}
                     className={`
-            px-4 py-2 rounded-lg font-bold text-sm transition-all duration-300 
+            px-3 py-1.5 md:px-4 md:py-2 rounded-lg font-bold text-[10px] md:text-sm transition-all duration-300 
             flex items-center gap-2 border-2
             ${currentStyle === style.id
-                            ? style.id === 'diablo'
-                                ? 'bg-red-900 border-red-500 text-red-100 shadow-lg shadow-red-900/50'
-                                : style.id === 'cyberpunk'
-                                    ? 'bg-cyan-900 border-cyan-400 text-cyan-100 shadow-lg shadow-cyan-500/50'
-                                    : 'bg-emerald-900 border-emerald-400 text-emerald-100 shadow-lg shadow-emerald-500/50'
-                            : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                            ? `bg-${style.colors.primary}/40 border-${style.colors.accent} text-white shadow-lg`
+                            : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 shadow-sm'
                         }
           `}
                 >
-                    <span className="text-lg">{style.icon}</span>
-                    <span>{style.name}</span>
+                    <span className="text-base md:text-lg">{style.icon}</span>
+                    <span className="hidden sm:inline">{style.name}</span>
                 </button>
             ))}
         </div>

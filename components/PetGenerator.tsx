@@ -21,6 +21,31 @@ const PET_TAGS = {
         species: ['Slime', 'Szkielet', 'Kot', 'Ptak', 'Duszek'],
         element: ['Ognisty', 'Lodowy', 'Magiczny', 'Latający'],
         size: ['1-slot', '2-slot', '3-slot']
+    },
+    gta: {
+        species: ['Chop (Rottweiler)', 'Małpka', 'Papuga', 'Robot-pies'],
+        element: ['Urban', 'Street', 'Pro'],
+        size: ['Obroża', 'Kamizelka', 'Tatuaż']
+    },
+    fortnite: {
+        species: ['Plecak-pies', 'Robo-kot', 'Smok', 'Dinozaur', 'Kurczak'],
+        element: ['Stylized', 'Vibrant', 'Hologram'],
+        size: ['Rare', 'Epic', 'Mythic']
+    },
+    hades: {
+        species: ['Cerber (mały)', 'Duch', 'Cień', 'Swa', 'Żaba'],
+        element: ['Boski', 'Ognisty', 'Spectral'],
+        size: ['Hades', 'Olympic', 'Abyss']
+    },
+    tibia: {
+        species: ['Baby Dragon', 'Lion Cub', 'Panda', 'Hedgehog', 'Bat'],
+        element: ['Charm', 'Tiny set'],
+        size: ['Oldschool', 'Sprite']
+    },
+    cuphead: {
+        species: ['Kubeczek', 'Piesek', 'Ptak', 'Duch', 'Maszynka'],
+        element: ['Rubber Hose', 'Watercolor'],
+        size: ['Friendly', 'Grumpy', 'Bouncing']
     }
 };
 
@@ -41,10 +66,19 @@ export const PetGenerator: React.FC = () => {
     const storageKey = `sanctuary_pets_${currentStyle}`;
     const settingsKey = `sanctuary_pets_settings_${currentStyle}`;
 
-    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+    const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
         const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+        if (!saved) return 'transparent';
+        const parsed = JSON.parse(saved);
+        if (parsed.bgMode) return parsed.bgMode;
+        return parsed.autoRemoveBg ? 'transparent' : 'green';
     });
+
+    const [bgTag, setBgTag] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).bgTag ?? '' : '';
+    });
+
     const [model, setModel] = useState(() => {
         const saved = localStorage.getItem(settingsKey);
         return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
@@ -75,8 +109,8 @@ export const PetGenerator: React.FC = () => {
 
     // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
-    }, [autoRemoveBg, model, selectedTags, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, model, selectedTags }));
+    }, [bgMode, bgTag, model, selectedTags, settingsKey]);
 
 
     // Reload when style changes
@@ -102,26 +136,26 @@ export const PetGenerator: React.FC = () => {
         const fitInFrame = "wide shot, small creature, centered, entire subject COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE AND BELOW, generous padding around the subject, zoomed out significantly to ensure nothing is cut off";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
 
-        if (autoRemoveBg) {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+        if (bgMode === 'transparent') {
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
+        } else if (bgMode === 'green') {
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+
+        const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
+        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, ${fitInFrame}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {
-        if (currentStyle === 'cyberpunk') return 'np. Mały dron-towarzysz, robo-kot...';
-        if (currentStyle === 'pixelart') return 'np. Slime pixel art, ptak 16-bit...';
-        return 'np. Mały goblin skarbnik...';
+        return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.pets.toLowerCase()}...`;
     };
 
     const getButtonText = () => {
-        if (currentStyle === 'cyberpunk') return 'Aktywuj Drona';
-        if (currentStyle === 'pixelart') return 'Stwórz Peta';
-        return 'Przyzwij';
+        return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.pets}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {
-        return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
+        return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
     };
 
     const removeBg = async (id: string) => {
@@ -172,7 +206,7 @@ export const PetGenerator: React.FC = () => {
         try {
             const { url, modelUsed } = await generateAvatar(full, model);
             let finalUrl = url;
-            if (autoRemoveBg) {
+            if (bgMode === 'transparent') {
                 try { finalUrl = await processRemoveBg(url); } catch (e) { }
             }
             setResults(prev => [{ id: Math.random().toString(), url: finalUrl, modelUsed, originalUrl: url }, ...prev]);
@@ -184,15 +218,50 @@ export const PetGenerator: React.FC = () => {
             <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
                 <div className="flex justify-between items-center mb-4">
                     <label className="font-diablo text-teal-900 text-[10px] uppercase block">Przywołanie Chowańca</label>
-                    <div className="flex items-center gap-2">
-                        <input type="checkbox" id="autoTransparentPet" checked={autoRemoveBg} onChange={e => setAutoRemoveBg(e.target.checked)} className="accent-emerald-600" />
-                        <label htmlFor="autoTransparentPet" className="text-emerald-500 text-[9px] uppercase font-serif cursor-pointer hover:text-emerald-400">Przezroczyste Tło</label>
+                    <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
+                        {[
+                            { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
+                            { id: 'green', label: 'Zielone', color: 'green' },
+                            { id: 'themed', label: 'Tematyczne', color: 'amber' }
+                        ].map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => setBgMode(mode.id as any)}
+                                className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
+                                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
+                                    : 'text-stone-600 hover:text-stone-400'
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
                     </div>
                     <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
                         <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
                         <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
                     </select>
                 </div>
+
+                {bgMode === 'themed' && (
+                    <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
+                        <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
+                        <div className="flex flex-wrap gap-1.5">
+                            {styleConfig.backgroundTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setBgTag(bgTag === tag ? '' : tag)}
+                                    className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
+                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
+                                        : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                        }`}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-4 mb-4">
                     {Object.entries(PET_TAGS[currentStyle as keyof typeof PET_TAGS]).map(([category, values]) => (
                         <div key={category}>

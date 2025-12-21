@@ -21,6 +21,31 @@ const MOUNT_TAGS = {
         type: ['Koń', 'Gryf', 'Smok', 'Wielka Żaba', 'Chmura'],
         armor: ['Zwykły', 'Srebrny', 'Złoty', 'Magiczny'],
         element: ['Latający', 'Szybki', 'Pikselowy', 'Mocny']
+    },
+    gta: {
+        type: ['Sportowe', 'Muscle Car', 'Motocykl', 'SUV', 'Helikopter'],
+        armor: ['Cywilny', 'Tuning', 'Policyjny', 'Opancerzony'],
+        element: ['Street', 'Luxury', 'Underworld']
+    },
+    fortnite: {
+        type: ['Quad', 'Samochód', 'Motor', 'UFO', 'Deskolotka'],
+        armor: ['Default', 'Camo', 'Sci-fi', 'Cartoon'],
+        element: ['Nitro', 'Kinetic', 'Chrome']
+    },
+    hades: {
+        type: ['Rydwan', 'Bestia z Tartaru', 'Cień', 'Pegaz'],
+        armor: ['Boski', 'Ognisty', 'Mroczny', 'Złoty'],
+        element: ['Olympus', 'Tartarus', 'Elysium']
+    },
+    tibia: {
+        type: ['War Bear', 'Noble Lion', 'Draptor', 'Midnight Panther'],
+        armor: ['Saddled', 'Armored', 'Rare'],
+        element: ['Fast', 'Legendary', 'Oldschool']
+    },
+    cuphead: {
+        type: ['Aeroplan', 'Auto', 'Rower', 'Balon'],
+        armor: ['Retro', 'Hand-drawn', 'Surreal'],
+        element: ['Winged', 'Steaming', 'Bouncing']
     }
 };
 
@@ -41,10 +66,19 @@ export const MountGenerator: React.FC = () => {
     const storageKey = `sanctuary_mounts_${currentStyle}`;
     const settingsKey = `sanctuary_mounts_settings_${currentStyle}`;
 
-    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+    const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
         const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+        if (!saved) return 'transparent';
+        const parsed = JSON.parse(saved);
+        if (parsed.bgMode) return parsed.bgMode;
+        return parsed.autoRemoveBg ? 'transparent' : 'green';
     });
+
+    const [bgTag, setBgTag] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).bgTag ?? '' : '';
+    });
+
     const [model, setModel] = useState(() => {
         const saved = localStorage.getItem(settingsKey);
         return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
@@ -75,8 +109,8 @@ export const MountGenerator: React.FC = () => {
 
     // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
-    }, [autoRemoveBg, model, selectedTags, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, model, selectedTags }));
+    }, [bgMode, bgTag, model, selectedTags, settingsKey]);
 
     // Reload when style changes
     React.useEffect(() => {
@@ -101,26 +135,26 @@ export const MountGenerator: React.FC = () => {
         const fitInFrame = "wide shot, side view, centered, entire mount COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE HEAD AND BELOW FEET, generous padding around the subject, zoomed out significantly to ensure nothing is cut off";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
 
-        if (autoRemoveBg) {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+        if (bgMode === 'transparent') {
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, ${fitInFrame}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
+        } else if (bgMode === 'green') {
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, side view, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+
+        const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
+        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, side view, ${fitInFrame}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {
-        if (currentStyle === 'cyberpunk') return 'np. Motocykl z neonami, hover car...';
-        if (currentStyle === 'pixelart') return 'np. Koń pixelowy, smok do jazdy...';
-        return 'np. Koń w zbroi z kości...';
+        return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.mounts.toLowerCase()}...`;
     };
 
     const getButtonText = () => {
-        if (currentStyle === 'cyberpunk') return 'Przekaż Pojazd';
-        if (currentStyle === 'pixelart') return 'Stwórz Mount';
-        return 'Otwórz Stajnię';
+        return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.mounts}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {
-        return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
+        return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
     };
 
     const removeBg = async (id: string) => {
@@ -171,7 +205,7 @@ export const MountGenerator: React.FC = () => {
         try {
             const { url, modelUsed } = await generateAvatar(full, model);
             let finalUrl = url;
-            if (autoRemoveBg) {
+            if (bgMode === 'transparent') {
                 try { finalUrl = await processRemoveBg(url); } catch (e) { }
             }
             setResults(prev => [{ id: Math.random().toString(), url: finalUrl, modelUsed, originalUrl: url }, ...prev]);
@@ -183,15 +217,50 @@ export const MountGenerator: React.FC = () => {
             <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
                 <div className="flex justify-between items-center mb-4">
                     <label className="font-diablo text-orange-900 text-[10px] uppercase block">Stajnie Sanktuarium</label>
-                    <div className="flex items-center gap-2">
-                        <input type="checkbox" id="autoTransparentMount" checked={autoRemoveBg} onChange={e => setAutoRemoveBg(e.target.checked)} className="accent-emerald-600" />
-                        <label htmlFor="autoTransparentMount" className="text-emerald-500 text-[9px] uppercase font-serif cursor-pointer hover:text-emerald-400">Przezroczyste Tło</label>
+                    <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
+                        {[
+                            { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
+                            { id: 'green', label: 'Zielone', color: 'green' },
+                            { id: 'themed', label: 'Tematyczne', color: 'amber' }
+                        ].map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => setBgMode(mode.id as any)}
+                                className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
+                                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
+                                    : 'text-stone-600 hover:text-stone-400'
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
                     </div>
                     <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
                         <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
                         <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
                     </select>
                 </div>
+
+                {bgMode === 'themed' && (
+                    <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
+                        <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
+                        <div className="flex flex-wrap gap-1.5">
+                            {styleConfig.backgroundTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setBgTag(bgTag === tag ? '' : tag)}
+                                    className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
+                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
+                                        : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                        }`}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-4 mb-4">
                     {Object.entries(MOUNT_TAGS[currentStyle as keyof typeof MOUNT_TAGS]).map(([category, values]) => (
                         <div key={category}>

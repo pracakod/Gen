@@ -20,6 +20,31 @@ const ITEM_TAGS = {
     type: ['Miecz', 'Laska', 'Hełm', 'Buty', 'Zwój', 'Klucz'],
     material: ['Drewno', 'Stal', 'Srebro', 'Marmur', 'Pikselowy'],
     rarity: ['Biały', 'Zielony', 'Niebieski', 'Fioletowy', 'Pomarańczowy']
+  },
+  gta: {
+    type: ['Pistolet', 'Uzi', 'Torba z Kasą', 'Zegarek', 'Kluczyki', 'Telefon'],
+    material: ['Stal', 'Złoto', 'Skóra', 'Carbon'],
+    rarity: ['Tani', 'Standard', 'Premium', 'Luksusowy']
+  },
+  fortnite: {
+    type: ['Kilof', 'Plecak', 'Lotnia', 'Karabin', 'Trap', 'Llama'],
+    material: ['Metal', 'Cegła', 'Drewno', 'Energy'],
+    rarity: ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
+  },
+  hades: {
+    type: ['Miecz', 'Włócznia', 'Łuk', 'Tarcza', 'Nektar'],
+    material: ['Adamentyn', 'Krew Tytanów', 'Cień', 'Złoto'],
+    rarity: ['Boon', 'Upgrade', 'Artifact', 'Treasury']
+  },
+  tibia: {
+    type: ['Sword', 'Mace', 'Axe', 'Shield', 'Rune', 'Backpack'],
+    material: ['Bronze', 'Vampire', 'Demon', 'Golden'],
+    rarity: ['Quest Item', 'Rare', 'Very Rare', 'Impossible']
+  },
+  cuphead: {
+    type: ['Napój', 'Rękawica', 'Pocisk', 'Puchar', 'Moneta'],
+    material: ['Papier', 'Atrament', 'Szkło', 'Farba'],
+    rarity: ['Simple', 'Regular', 'Grade A', 'Perfect S']
   }
 };
 
@@ -46,10 +71,19 @@ export const ItemGenerator: React.FC = () => {
   const storageKey = `sanctuary_items_${currentStyle}`;
   const settingsKey = `sanctuary_items_settings_${currentStyle}`;
 
-  const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+  const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
     const saved = localStorage.getItem(settingsKey);
-    return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+    if (!saved) return 'transparent';
+    const parsed = JSON.parse(saved);
+    if (parsed.bgMode) return parsed.bgMode;
+    return parsed.autoRemoveBg ? 'transparent' : 'green';
   });
+
+  const [bgTag, setBgTag] = useState(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).bgTag ?? '' : '';
+  });
+
   const [model, setModel] = useState(() => {
     const saved = localStorage.getItem(settingsKey);
     return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
@@ -83,8 +117,8 @@ export const ItemGenerator: React.FC = () => {
 
   // Save settings
   React.useEffect(() => {
-    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
-  }, [autoRemoveBg, model, selectedTags, settingsKey]);
+    localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, model, selectedTags }));
+  }, [bgMode, bgTag, model, selectedTags, settingsKey]);
 
   // Reload when style changes
   React.useEffect(() => {
@@ -109,26 +143,26 @@ export const ItemGenerator: React.FC = () => {
     const fitInFrame = "single item, object COMPLETELY INSIDE the frame, centered, zoomed out slightly to ensure nothing is cut off, generous padding around the object";
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between object and background";
 
-    if (autoRemoveBg) {
-      return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+    if (bgMode === 'transparent') {
+      return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
+    } else if (bgMode === 'green') {
+      return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
     }
-    return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+
+    const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
+    return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, ${fitInFrame}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
   };
 
   const getPlaceholder = () => {
-    if (currentStyle === 'cyberpunk') return 'np. Karabin laserowy z celownikiem holograficznym...';
-    if (currentStyle === 'pixelart') return 'np. Miecz piorunów, tarcza ognia...';
-    return 'np. Ostrze z obsydianu płonące niebieskim ogniem...';
+    return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.items.toLowerCase()}...`;
   };
 
   const getButtonText = () => {
-    if (currentStyle === 'cyberpunk') return 'Wyprodukuj Sprzęt';
-    if (currentStyle === 'pixelart') return 'Stwórz Item';
-    return 'Wykuj Przedmiot';
+    return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.items}`;
   };
 
   const processRemoveBg = async (imageUrl: string) => {
-    return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
+    return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
   };
 
   const modifyEdge = async (id: string, amount: number) => {
@@ -188,9 +222,17 @@ export const ItemGenerator: React.FC = () => {
 
     try {
       const { url, modelUsed } = await generateAvatar(fullPrompt, model);
+      let finalUrl = url;
+      if (bgMode === 'transparent') {
+        try {
+          finalUrl = await processRemoveBg(url);
+        } catch (e) {
+          console.error("BG Removal failed:", e);
+        }
+      }
       setResults(prev => [{
         id: Math.random().toString(36),
-        url,
+        url: finalUrl,
         type: selectedTags.type || 'Item',
         status: 'success',
         modelUsed,
@@ -209,17 +251,23 @@ export const ItemGenerator: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <label className="font-diablo text-amber-600 text-[10px] uppercase">Runiczna Kuźnia</label>
           <div className="flex gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="autoTransparent"
-                checked={autoRemoveBg}
-                onChange={(e) => setAutoRemoveBg(e.target.checked)}
-                className="accent-amber-600 cursor-pointer"
-              />
-              <label htmlFor="autoTransparent" className="text-amber-600 text-[9px] uppercase font-serif cursor-pointer hover:text-amber-500">
-                Przezroczyste Tło
-              </label>
+            <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
+              {[
+                { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
+                { id: 'green', label: 'Zielone', color: 'green' },
+                { id: 'themed', label: 'Tematyczne', color: 'amber' }
+              ].map(mode => (
+                <button
+                  key={mode.id}
+                  onClick={() => setBgMode(mode.id as any)}
+                  className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
+                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
+                    : 'text-stone-600 hover:text-stone-400'
+                    }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
             </div>
             <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
               <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
@@ -227,6 +275,26 @@ export const ItemGenerator: React.FC = () => {
             </select>
           </div>
         </div>
+
+        {bgMode === 'themed' && (
+          <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
+            <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
+            <div className="flex flex-wrap gap-1.5">
+              {styleConfig.backgroundTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setBgTag(bgTag === tag ? '' : tag)}
+                  className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
+                    ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
+                    : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                    }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4 mb-6">
           {Object.entries(ITEM_TAGS[currentStyle as keyof typeof ITEM_TAGS]).map(([category, values]) => (

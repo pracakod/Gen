@@ -40,13 +40,7 @@ export const LoreGenerator: React.FC = () => {
     }, [currentStyle]);
 
     const getFullPrompt = () => {
-        const styleTheme = currentStyle === 'cyberpunk'
-            ? 'dark futuristic cyberpunk neon-noir'
-            : currentStyle === 'pixelart'
-                ? 'retro 16-bit RPG adventure'
-                : 'dark gothic fantasy Diablo-like';
-
-        return `As a Lore Master of a ${styleTheme} world, write a ${loreType} in Polish about: ${topic || '[temat]'}. Use appropriate terminology and atmosphere.`;
+        return `${styleConfig.lorePersona} Napisz ${loreType} w języku polskim na temat: ${topic || '[temat]'}. Używaj terminologii i klimatu pasującego do stylu: ${styleConfig.artStyle}.`;
     };
 
     const handleGenerate = async () => {
@@ -68,23 +62,9 @@ export const LoreGenerator: React.FC = () => {
         }
     };
 
-    const getLabel = () => {
-        if (currentStyle === 'cyberpunk') return 'Baza Danych Netu';
-        if (currentStyle === 'pixelart') return 'Księga Przygód';
-        return 'Kroniki Horadrimów';
-    };
-
-    const getPlaceholder = () => {
-        if (currentStyle === 'cyberpunk') return 'np. Megakorporacja Arasaka...';
-        if (currentStyle === 'pixelart') return 'np. Legenda o zaginionym pikselu...';
-        return 'np. Upadły Anioł Inarius...';
-    };
-
-    const getButtonText = () => {
-        if (currentStyle === 'cyberpunk') return 'Pobierz Dane';
-        if (currentStyle === 'pixelart') return 'Zapisz Quest';
-        return 'Spisz Kronikę';
-    };
+    const getLabel = () => styleConfig.tabLabels.lore;
+    const getPlaceholder = () => styleConfig.placeholders.lore;
+    const getButtonText = () => styleConfig.buttons.lore;
 
     return (
         <div className="animate-fade-in flex flex-col gap-6">

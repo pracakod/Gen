@@ -40,6 +40,41 @@ const TAGS = {
         weapon: ['Brak', 'Miecz', 'Łuk', 'Laska', 'Sztylet', 'Młot'],
         color: ['Niebieski', 'Czerwony', 'Zielony', 'Złoty', 'Srebrny'],
     },
+    gta: {
+        race: ['Człowiek', 'Gangster', 'Biznesmen', 'Agent', 'Biker'],
+        class: ['Hacker', 'Snajper', 'Specjaliasta IT', 'Ochroniarz'],
+        armor: ['Brak', 'Garnitur', 'Kurtka skórzana', 'Kamizelka'],
+        weapon: ['Brak', 'Pistolet', 'Uzi', 'Kij baseballowy', 'Karabin'],
+        color: ['Pomarańcz', 'Blue', 'White', 'Black'],
+    },
+    fortnite: {
+        race: ['Bohater', 'Robot', 'Kosmita', 'Zabawka'],
+        class: ['Commander', 'Ninja', 'Soldier'],
+        armor: ['Default Skin', 'Tactical', 'Futuristic', 'Funky'],
+        weapon: ['Assault Rifle', 'Shotgun', 'Pickaxe', 'Sniper'],
+        color: ['Epic Purple', 'Rare Blue', 'Legendary Gold'],
+    },
+    hades: {
+        race: ['Bóstwo', 'Duch', 'Cień', 'Szkielet', 'Heros'],
+        class: ['Wojownik', 'Posłaniec', 'Strażnik', 'Berserker'],
+        armor: ['Toga', 'Złota Zbroja', 'Przepaska'],
+        weapon: ['Miecz', 'Włócznia', 'Łuk', 'Tarcza', 'Sztylety'],
+        color: ['Blood Red', 'Divine Gold', 'Spectral Blue'],
+    },
+    tibia: {
+        race: ['Human', 'Orc', 'Dwarf', 'Elf', 'Skeleton'],
+        class: ['Knight', 'Paladin', 'Sorcerer', 'Druid'],
+        armor: ['Leather Set', 'Plate Set', 'Golden Set', 'Demon Set'],
+        weapon: ['Sword', 'Axe', 'Mace', 'Staff', 'Crossbow'],
+        color: ['Retro RGB', 'Tibia Green'],
+    },
+    cuphead: {
+        race: ['Humanoid', 'Object-head', 'Animal', 'Ghost'],
+        class: ['Brawler', 'Trickster', 'Boss'],
+        armor: ['Retro Suit', 'Cartoon Dress'],
+        weapon: ['Peashooter', 'Gloves', 'Wand', 'Cane'],
+        color: ['Vintage Red', 'Classic Blue', 'Old Paper'],
+    }
 };
 
 interface SpriteResult {
@@ -91,9 +126,17 @@ export const SpriteGenerator: React.FC = () => {
         return saved ? JSON.parse(saved).genMode ?? 'single' : 'single';
     });
 
-    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+    const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
         const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+        if (!saved) return 'transparent';
+        const parsed = JSON.parse(saved);
+        if (parsed.bgMode) return parsed.bgMode;
+        return parsed.autoRemoveBg ? 'transparent' : 'green';
+    });
+
+    const [bgTag, setBgTag] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).bgTag ?? '' : '';
     });
 
     const [loading, setLoading] = useState(false);
@@ -114,8 +157,8 @@ export const SpriteGenerator: React.FC = () => {
 
     // Zapisz ustawienia
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ tags: selectedTags, model, customPrompt, genMode, autoRemoveBg }));
-    }, [selectedTags, model, customPrompt, genMode, autoRemoveBg, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ tags: selectedTags, model, customPrompt, genMode, bgMode, bgTag }));
+    }, [selectedTags, model, customPrompt, genMode, bgMode, bgTag, settingsKey]);
 
     // Zapisz wyniki
     React.useEffect(() => {
@@ -184,9 +227,15 @@ export const SpriteGenerator: React.FC = () => {
         const fitInFrame = "entire character must be fully visible and centered in frame, not cut off, whole body shown";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
-        const bgPrompt = autoRemoveBg
-            ? "on pure white background, isolated on white, cut out, empty background, no shadows on background"
-            : "on solid pure neon green background #00FF00, flat color background, no shadows on background";
+        let bgPrompt = "";
+        if (bgMode === 'transparent') {
+            bgPrompt = "transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows";
+        } else if (bgMode === 'green') {
+            bgPrompt = "on solid pure neon green background #00FF00, flat color background, no shadows on background";
+        } else {
+            const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
+            bgPrompt = bgDesc;
+        }
 
         if (genMode === 'sheet') {
             const selectedLabels = selectedDirections.map(id => DIRECTIONS.find(d => d.id === id)?.label).join(', ');
@@ -210,7 +259,7 @@ export const SpriteGenerator: React.FC = () => {
             try {
                 const { url, modelUsed } = await generateAvatar(prompt, model);
                 let finalUrl = url;
-                if (autoRemoveBg) {
+                if (bgMode === 'transparent') {
                     try {
                         finalUrl = await removeBackground(url, 'white');
                     } catch (e) { }
@@ -234,7 +283,7 @@ export const SpriteGenerator: React.FC = () => {
                 try {
                     const { url, modelUsed } = await generateAvatar(prompt, model);
                     let finalUrl = url;
-                    if (autoRemoveBg) {
+                    if (bgMode === 'transparent') {
                         try {
                             finalUrl = await removeBackground(url, 'white');
                         } catch (e) { }
@@ -320,7 +369,7 @@ export const SpriteGenerator: React.FC = () => {
         try {
             // Spróbuj usunąć tło na podstawie ustawienia autoRemoveBg, 
             // ale jeśli to arkusz, preferuj inteligentne usunięcie czarnego tła lub bieli
-            const mode = autoRemoveBg ? 'white' : 'green';
+            const mode = bgMode === 'transparent' ? 'white' : 'green';
             const newUrl = await removeBackground(item.url, mode);
             setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false, originalUrl: item.url } : r));
         } catch (e) {
@@ -379,16 +428,11 @@ export const SpriteGenerator: React.FC = () => {
 
     // Pobierz tekst przycisku
     const getButtonText = () => {
-        if (currentStyle === 'cyberpunk') return 'Generuj Sprite';
-        if (currentStyle === 'pixelart') return 'Renderuj Pixel Art';
-        return 'Stwórz Sprite';
+        return `${styleConfig.buttons.generate} Sprite Sheets`;
     };
 
-    // Placeholdery per styl
     const getLabelForStyle = () => {
-        if (currentStyle === 'cyberpunk') return 'Cyberpunk Sprite Generator';
-        if (currentStyle === 'pixelart') return 'Pixel Art Sprite Generator';
-        return 'Dark Fantasy Sprite Generator';
+        return `${styleConfig.name} Sprite Generator`;
     };
 
     const tags = getCurrentTags();
@@ -401,17 +445,23 @@ export const SpriteGenerator: React.FC = () => {
                         {getLabelForStyle()}
                     </label>
                     <div className="flex gap-4 items-center">
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                id="autoTransparentSprite"
-                                checked={autoRemoveBg}
-                                onChange={(e) => setAutoRemoveBg(e.target.checked)}
-                                className="accent-emerald-600 cursor-pointer"
-                            />
-                            <label htmlFor="autoTransparentSprite" className="text-emerald-500 text-[9px] uppercase font-serif cursor-pointer hover:text-emerald-400">
-                                Przezroczyste Tło
-                            </label>
+                        <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
+                            {[
+                                { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
+                                { id: 'green', label: 'Zielone', color: 'green' },
+                                { id: 'themed', label: 'Tematyczne', color: 'amber' }
+                            ].map(mode => (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setBgMode(mode.id as any)}
+                                    className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
+                                        ? `bg-${mode.color}-900/40 text-${mode.color}-400`
+                                        : 'text-stone-600 hover:text-stone-400'
+                                        }`}
+                                >
+                                    {mode.label}
+                                </button>
+                            ))}
                         </div>
                         <select
                             value={genMode}
@@ -431,6 +481,26 @@ export const SpriteGenerator: React.FC = () => {
                         </select>
                     </div>
                 </div>
+
+                {bgMode === 'themed' && (
+                    <div className="mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
+                        <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
+                        <div className="flex flex-wrap gap-1.5">
+                            {styleConfig.backgroundTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setBgTag(bgTag === tag ? '' : tag)}
+                                    className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
+                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
+                                        : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                        }`}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Własny Prompt */}
                 <div className="mb-6">
@@ -585,8 +655,8 @@ export const SpriteGenerator: React.FC = () => {
                             <p className="text-[8px] text-stone-600 uppercase">Dodatki techniczne:</p>
                             <p className="text-[8px] text-stone-700 font-mono">
                                 {genMode === 'sheet'
-                                    ? `+ SPRITE SHEET, grid of views (${selectedDirections.length}), ${autoRemoveBg ? 'white bg' : 'neon green bg'}...`
-                                    : `+ [Kierunek], full body, centered, ${styleConfig.artStyle}, ${autoRemoveBg ? 'white bg' : 'neon green bg'}...`
+                                    ? `+ SPRITE SHEET, grid of views (${selectedDirections.length}), ${bgMode === 'transparent' ? 'white bg' : bgMode === 'green' ? 'neon green bg' : 'themed bg'}...`
+                                    : `+ [Kierunek], full body, centered, ${styleConfig.artStyle}, ${bgMode === 'transparent' ? 'white bg' : bgMode === 'green' ? 'neon green bg' : 'themed bg'}...`
                                 }
                             </p>
                         </div>

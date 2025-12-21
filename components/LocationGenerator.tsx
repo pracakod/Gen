@@ -20,6 +20,31 @@ const LOCATION_TAGS = {
         biome: ['Las', 'Zamek', 'Wioska', 'Jaskinia', 'Wulkan'],
         atmosphere: ['Retro', 'Kolorowa', 'Niebezpieczna', 'Spokojna'],
         time: ['Dzień', 'Zachód słońca', 'Noc (Pikselowa)']
+    },
+    gta: {
+        biome: ['Willa', 'Centrum', 'Slumsy', 'Plaża', 'Klub nocny'],
+        atmosphere: ['Słoneczna', 'Cyniczna', 'Gorąca', 'Napięta'],
+        time: ['Południe', 'Złota godzina', 'Neonowa noc']
+    },
+    fortnite: {
+        biome: ['Łąka', 'Baza', 'Lodowiec', 'Pustynia', 'Miasto'],
+        atmosphere: ['Żywa', 'Heroiczna', 'Czysta', 'Epicka'],
+        time: ['Słoneczny dzień', 'Gwiaździsta noc', 'Burza']
+    },
+    hades: {
+        biome: ['Tartar', 'Asfodel', 'Elizjum', 'Dom Hadesa', 'Olimp'],
+        atmosphere: ['Eteryczna', 'Gorąca', 'Boska', 'Tajemnicza'],
+        time: ['Ciemność', 'Boski blask', 'Ognista aura']
+    },
+    tibia: {
+        biome: ['Depo', 'Dungeon', 'Swamp', 'City Wall', 'Desert'],
+        atmosphere: ['Nostalgiczna', 'Niebezpieczna', 'Prosta', 'Magiczna'],
+        time: ['Dzień', 'Lamp light', 'Noc']
+    },
+    cuphead: {
+        biome: ['Lunapark', 'Teatr', 'Ogród', 'Kasyno', 'Niebo'],
+        atmosphere: ['Szaleńcza', 'Vintage', 'Bajkowa', 'Akwarelowa'],
+        time: ['Showtime', 'Złote lata', 'Kreskówkowy zmierzch']
     }
 };
 
@@ -40,10 +65,19 @@ export const LocationGenerator: React.FC = () => {
     const storageKey = `sanctuary_locations_${currentStyle}`;
     const settingsKey = `sanctuary_locations_settings_${currentStyle}`;
 
-    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+    const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
         const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+        if (!saved) return 'themed';
+        const parsed = JSON.parse(saved);
+        if (parsed.bgMode) return parsed.bgMode;
+        return parsed.autoRemoveBg ? 'transparent' : 'themed';
     });
+
+    const [bgTag, setBgTag] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).bgTag ?? '' : '';
+    });
+
     const [model, setModel] = useState(() => {
         const saved = localStorage.getItem(settingsKey);
         return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
@@ -74,8 +108,8 @@ export const LocationGenerator: React.FC = () => {
 
     // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
-    }, [autoRemoveBg, model, selectedTags, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, model, selectedTags }));
+    }, [bgMode, bgTag, model, selectedTags, settingsKey]);
 
     // Reload when style changes
     React.useEffect(() => {
@@ -99,26 +133,25 @@ export const LocationGenerator: React.FC = () => {
         const baseText = parts.join(', ');
         const cleanEdges = "NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING"; // Lokacje czasem chcą mgeł, ale user chciał "bez mgieł dla łatwiejszego wycinania"
 
-        if (autoRemoveBg) {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+        if (bgMode === 'transparent') {
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
+        } else if (bgMode === 'green') {
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
+        const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
+        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {
-        if (currentStyle === 'cyberpunk') return 'np. Klub nocny w neonach, brudna alejka...';
-        if (currentStyle === 'pixelart') return 'np. Las pixel art, zamek 16-bit...';
-        return 'np. Katedra Tristram w płomieniach...';
+        return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.locations.toLowerCase()}...`;
     };
 
     const getButtonText = () => {
-        if (currentStyle === 'cyberpunk') return 'Skanuj Lokację';
-        if (currentStyle === 'pixelart') return 'Generuj Mapę';
-        return 'Wizualizuj';
+        return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.locations}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {
-        return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
+        return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
     };
 
     const removeBg = async (id: string) => {
@@ -169,7 +202,7 @@ export const LocationGenerator: React.FC = () => {
         try {
             const { url, modelUsed } = await generateAvatar(full, model);
             let finalUrl = url;
-            if (autoRemoveBg) {
+            if (bgMode === 'transparent') {
                 try { finalUrl = await processRemoveBg(url); } catch (e) { }
             }
             setResults(prev => [{ id: Math.random().toString(), url: finalUrl, modelUsed, originalUrl: url }, ...prev]);
@@ -185,15 +218,50 @@ export const LocationGenerator: React.FC = () => {
             <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
                 <div className="flex justify-between items-center mb-4">
                     <label className="font-diablo text-stone-400 text-[10px] uppercase block">Architektura Ciemności</label>
-                    <div className="flex items-center gap-2">
-                        <input type="checkbox" id="autoTransparentLocation" checked={autoRemoveBg} onChange={e => setAutoRemoveBg(e.target.checked)} className="accent-emerald-600" />
-                        <label htmlFor="autoTransparentLocation" className="text-emerald-500 text-[9px] uppercase font-serif cursor-pointer hover:text-emerald-400">Przezroczyste Tło</label>
+                    <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
+                        {[
+                            { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
+                            { id: 'green', label: 'Zielone', color: 'green' },
+                            { id: 'themed', label: 'Tematyczne', color: 'amber' }
+                        ].map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => setBgMode(mode.id as any)}
+                                className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
+                                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
+                                    : 'text-stone-600 hover:text-stone-400'
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
                     </div>
                     <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
                         <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
                         <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
                     </select>
                 </div>
+
+                {bgMode === 'themed' && (
+                    <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
+                        <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
+                        <div className="flex flex-wrap gap-1.5">
+                            {styleConfig.backgroundTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setBgTag(bgTag === tag ? '' : tag)}
+                                    className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
+                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
+                                        : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                        }`}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-4 mb-4">
                     {Object.entries(LOCATION_TAGS[currentStyle as keyof typeof LOCATION_TAGS]).map(([category, values]) => (
                         <div key={category}>
