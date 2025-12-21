@@ -177,7 +177,7 @@ export const SpriteGenerator: React.FC = () => {
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
         const bgPrompt = autoRemoveBg
-            ? "on pure white background, isolated on white, cut out, empty background"
+            ? "on pure white background, isolated on white, cut out, empty background, no shadows on background"
             : "on solid pure neon green background #00FF00, flat color background, no shadows on background";
 
         if (genMode === 'sheet') {
@@ -202,9 +202,11 @@ export const SpriteGenerator: React.FC = () => {
             try {
                 const { url, modelUsed } = await generateAvatar(prompt, model);
                 let finalUrl = url;
-                try {
-                    finalUrl = await removeBackground(url, autoRemoveBg ? 'white' : 'green');
-                } catch (e) { }
+                if (autoRemoveBg) {
+                    try {
+                        finalUrl = await removeBackground(url, 'white');
+                    } catch (e) { }
+                }
 
                 setResults(prev => [
                     { id: `${Date.now()}_sheet`, direction: 'sheet', url: finalUrl, modelUsed },
@@ -224,9 +226,11 @@ export const SpriteGenerator: React.FC = () => {
                 try {
                     const { url, modelUsed } = await generateAvatar(prompt, model);
                     let finalUrl = url;
-                    try {
-                        finalUrl = await removeBackground(url, autoRemoveBg ? 'white' : 'green');
-                    } catch (e) { }
+                    if (autoRemoveBg) {
+                        try {
+                            finalUrl = await removeBackground(url, 'white');
+                        } catch (e) { }
+                    }
 
                     setResults(prev => [
                         { id: `${Date.now()}_${dirId}`, direction: dirId, url: finalUrl, modelUsed },

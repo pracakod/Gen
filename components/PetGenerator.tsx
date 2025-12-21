@@ -103,7 +103,7 @@ export const PetGenerator: React.FC = () => {
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
 
         if (autoRemoveBg) {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
         }
         return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
     };

@@ -12,16 +12,19 @@ export const removeBackground = async (imageUrl: string, mode: 'white' | 'green'
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
             for (let i = 0; i < data.data.length; i += 4) {
+                const r = data.data[i];
+                const g = data.data[i + 1];
+                const b = data.data[i + 2];
+
                 if (mode === 'white') {
                     // White removal (approximate) - tuned for "pure white" isolation
-                    if (data.data[i] > 230 && data.data[i + 1] > 230 && data.data[i + 2] > 230) {
+                    // We check if all channels are very high, with some tolerance for off-white
+                    if (r > 220 && g > 220 && b > 220) {
                         data.data[i + 3] = 0;
                     }
                 } else {
-                    // Green screen detection
-                    if (data.data[i + 1] > 100 &&
-                        data.data[i + 1] > data.data[i] * 1.2 &&
-                        data.data[i + 1] > data.data[i + 2] * 1.2) {
+                    // Green screen detection - improved to be more selective
+                    if (g > 100 && g > r * 1.1 && g > b * 1.1) {
                         data.data[i + 3] = 0;
                     }
                 }

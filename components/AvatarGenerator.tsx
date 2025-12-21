@@ -131,7 +131,7 @@ export const AvatarGenerator: React.FC = () => {
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
     if (autoRemoveBg) {
-      return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, NO TEXT, ${styleConfig.negative}`;
+      return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, no shadows on background, NO TEXT, ${styleConfig.negative}`;
     }
 
     return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, ${styleConfig.environment}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, NO GREEN CLOTHING`;

@@ -100,7 +100,7 @@ export const LocationGenerator: React.FC = () => {
         const cleanEdges = "NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING"; // Lokacje czasem chcą mgeł, ale user chciał "bez mgieł dla łatwiejszego wycinania"
 
         if (autoRemoveBg) {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
         }
         return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
     };
