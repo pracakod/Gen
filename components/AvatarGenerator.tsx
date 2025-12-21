@@ -19,7 +19,7 @@ interface Result {
 }
 
 export const AvatarGenerator: React.FC = () => {
-  const { styleConfig } = useStyle();
+  const { styleConfig, currentStyle } = useStyle();
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('free-pollinations');
   const [loading, setLoading] = useState(false);
@@ -52,6 +52,12 @@ export const AvatarGenerator: React.FC = () => {
     }
 
     return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, on solid pure neon green background #00FF00, flat lighting on background, NO TEXT, NO GREEN CLOTHING`;
+  };
+
+  const getPlaceholder = () => {
+    if (currentStyle === 'cyberpunk') return 'np. Netrunner z implantami, haker w neonowej kurtce...';
+    if (currentStyle === 'pixelart') return 'np. Rycerz z mieczem, mag z laską...';
+    return 'np. Nekromanta w zbroi z kości...';
   };
 
   const processRemoveBg = async (imageUrl: string): Promise<string> => {
@@ -211,7 +217,7 @@ export const AvatarGenerator: React.FC = () => {
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="np. Nekromanta w zbroi z kości..."
+          placeholder={getPlaceholder()}
           className="w-full bg-black border border-stone-800 p-4 text-stone-200 mb-6 outline-none focus:border-red-900 min-h-[100px]"
         />
 

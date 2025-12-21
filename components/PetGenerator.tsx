@@ -52,6 +52,12 @@ export const PetGenerator: React.FC = () => {
         return `${getPetPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
+    const getPlaceholder = () => {
+        if (currentStyle === 'cyberpunk') return 'np. Mały dron-towarzysz, robo-kot...';
+        if (currentStyle === 'pixelart') return 'np. Slime pixel art, ptak 16-bit...';
+        return 'np. Mały goblin skarbnik...';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -129,7 +135,7 @@ export const PetGenerator: React.FC = () => {
                     type="text"
                     value={prompt}
                     onChange={e => setPrompt(e.target.value)}
-                    placeholder="np. Mały goblin skarbnik..."
+                    placeholder={getPlaceholder()}
                     className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none"
                 />
                 <div className="mb-4">

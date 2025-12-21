@@ -53,6 +53,12 @@ export const MountGenerator: React.FC = () => {
         return `${getMountPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
+    const getPlaceholder = () => {
+        if (currentStyle === 'cyberpunk') return 'np. Motocykl z neonami, hover car...';
+        if (currentStyle === 'pixelart') return 'np. Koń pixelowy, smok do jazdy...';
+        return 'np. Koń w zbroi z kości...';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -130,7 +136,7 @@ export const MountGenerator: React.FC = () => {
                     type="text"
                     value={prompt}
                     onChange={e => setPrompt(e.target.value)}
-                    placeholder="np. Koń w zbroi z kości..."
+                    placeholder={getPlaceholder()}
                     className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none"
                 />
                 <div className="mb-4">

@@ -57,6 +57,12 @@ export const LocationGenerator: React.FC = () => {
         return `${getLocationPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, NO TEXT, ${styleConfig.negative}`;
     };
 
+    const getPlaceholder = () => {
+        if (currentStyle === 'cyberpunk') return 'np. Klub nocny w neonach, brudna alejka...';
+        if (currentStyle === 'pixelart') return 'np. Las pixel art, zamek 16-bit...';
+        return 'np. Katedra Tristram w płomieniach...';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -138,7 +144,7 @@ export const LocationGenerator: React.FC = () => {
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="np. Katedra Tristram w płomieniach..."
+                        placeholder={getPlaceholder()}
                         className="w-full bg-black border border-stone-800 p-4 text-stone-200 outline-none focus:border-stone-600 min-h-[100px]"
                     />
                     <div className="mb-2">

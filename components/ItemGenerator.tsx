@@ -52,6 +52,12 @@ export const ItemGenerator: React.FC = () => {
     return `${getItemPrefix()}, ${itemType}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
   };
 
+  const getPlaceholder = () => {
+    if (currentStyle === 'cyberpunk') return 'np. Karabin laserowy z celownikiem holograficznym...';
+    if (currentStyle === 'pixelart') return 'np. Miecz piorunów, tarcza ognia...';
+    return 'np. Ostrze z obsydianu płonące niebieskim ogniem...';
+  };
+
   const processRemoveBg = async (imageUrl: string) => {
     return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
   };
@@ -167,7 +173,7 @@ export const ItemGenerator: React.FC = () => {
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="np. Ostrze z obsydianu płonące niebieskim ogniem..."
+          placeholder={getPlaceholder()}
           className="w-full bg-black border border-stone-800 p-4 text-stone-200 mb-6 outline-none focus:border-amber-900 min-h-[100px]"
         />
 

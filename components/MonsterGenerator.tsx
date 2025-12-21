@@ -46,6 +46,12 @@ export const MonsterGenerator: React.FC = () => {
         return `${getMonsterPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
+    const getPlaceholder = () => {
+        if (currentStyle === 'cyberpunk') return 'np. Cyborg morderczy, mutant z kanałów...';
+        if (currentStyle === 'pixelart') return 'np. Boss smok, goblin wojownik...';
+        return 'np. Demon ognia z rogami...';
+    };
+
     const processRemoveBg = async (imageUrl: string) => {
         return removeBackground(imageUrl, autoRemoveBg ? 'white' : 'green');
     };
@@ -128,7 +134,7 @@ export const MonsterGenerator: React.FC = () => {
                     type="text"
                     value={prompt}
                     onChange={e => setPrompt(e.target.value)}
-                    placeholder="np. Demon ognia z rogami..."
+                    placeholder={getPlaceholder()}
                     className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none focus:border-red-900"
                 />
                 <div className="mb-4">
