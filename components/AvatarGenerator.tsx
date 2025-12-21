@@ -24,25 +24,49 @@ export const AvatarGenerator: React.FC = () => {
   const [model, setModel] = useState('free-pollinations');
   const [loading, setLoading] = useState(false);
 
-  // Load from local storage
+  // Storage key per style
+  const storageKey = `sanctuary_avatars_${currentStyle}`;
+  const settingsKey = `sanctuary_avatars_settings_${currentStyle}`;
+
+  // Load from local storage (per style)
   const [results, setResults] = useState<Result[]>(() => {
-    const saved = localStorage.getItem('sanctuary_avatars');
+    const saved = localStorage.getItem(storageKey);
     return saved ? JSON.parse(saved) : [];
   });
 
   const [error, setError] = useState<string | null>(null);
 
-  // Save to local storage
+  // Load settings from localStorage
+  const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+  });
+
+  const [genMale, setGenMale] = useState(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).genMale ?? true : true;
+  });
+
+  const [genFemale, setGenFemale] = useState(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).genFemale ?? true : true;
+  });
+
+  // Save results to local storage (per style)
   React.useEffect(() => {
-    localStorage.setItem('sanctuary_avatars', JSON.stringify(results));
-  }, [results]);
+    localStorage.setItem(storageKey, JSON.stringify(results));
+  }, [results, storageKey]);
 
-  // New state for auto-remove background
-  const [autoRemoveBg, setAutoRemoveBg] = useState(false);
+  // Save settings to local storage
+  React.useEffect(() => {
+    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, genMale, genFemale, model }));
+  }, [autoRemoveBg, genMale, genFemale, model, settingsKey]);
 
-  // Restore gender selection state
-  const [genMale, setGenMale] = useState(true);
-  const [genFemale, setGenFemale] = useState(true);
+  // Reload data when style changes
+  React.useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    setResults(saved ? JSON.parse(saved) : []);
+  }, [currentStyle]);
 
   const getFullPromptForGender = (gender: 'Male' | 'Female') => {
     const enhancedUserText = enhanceUserPrompt(prompt || '[opis]', 'character');

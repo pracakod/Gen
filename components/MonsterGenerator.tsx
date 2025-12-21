@@ -19,19 +19,41 @@ export const MonsterGenerator: React.FC = () => {
     const { styleConfig, currentStyle } = useStyle();
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
-    const [autoRemoveBg, setAutoRemoveBg] = useState(false);
-    const [model, setModel] = useState('free-pollinations');
 
-    // Load from local storage
+    // Storage key per style
+    const storageKey = `sanctuary_monsters_${currentStyle}`;
+    const settingsKey = `sanctuary_monsters_settings_${currentStyle}`;
+
+    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+    });
+    const [model, setModel] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
+    });
+
+    // Load from local storage (per style)
     const [results, setResults] = useState<Result[]>(() => {
-        const saved = localStorage.getItem('sanctuary_monsters');
+        const saved = localStorage.getItem(storageKey);
         return saved ? JSON.parse(saved) : [];
     });
 
-    // Save to local storage
+    // Save to local storage (per style)
     React.useEffect(() => {
-        localStorage.setItem('sanctuary_monsters', JSON.stringify(results));
-    }, [results]);
+        localStorage.setItem(storageKey, JSON.stringify(results));
+    }, [results, storageKey]);
+
+    // Save settings
+    React.useEffect(() => {
+        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model }));
+    }, [autoRemoveBg, model, settingsKey]);
+
+    // Reload when style changes
+    React.useEffect(() => {
+        const saved = localStorage.getItem(storageKey);
+        setResults(saved ? JSON.parse(saved) : []);
+    }, [currentStyle]);
 
     const getMonsterPrefix = () => {
         if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 enemy, cyborg creature, malfunctioning android, mutant';

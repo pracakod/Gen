@@ -18,31 +18,41 @@ export const LocationGenerator: React.FC = () => {
     const { styleConfig, currentStyle } = useStyle();
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
-    const [autoRemoveBg, setAutoRemoveBg] = useState(false);
-    const [model, setModel] = useState('free-pollinations');
 
-    // Load from local storage
-    const [results, setResults] = useState<Result[]>(() => {
-        const saved = localStorage.getItem('sanctuary_location_result');
-        if (!saved) return [];
-        try {
-            const parsed = JSON.parse(saved);
-            if (!Array.isArray(parsed)) {
-                if (typeof parsed === 'string') return [{ id: Math.random().toString(), url: parsed, modelUsed: 'Moc Pustki (Free)' }];
-                return [{ ...parsed, id: parsed.id || Math.random().toString(), modelUsed: parsed.modelUsed || 'Moc Pustki (Free)' }];
-            }
-            return parsed.map((item: any) => ({
-                ...item,
-                id: item.id || Math.random().toString(),
-                modelUsed: item.modelUsed || 'Moc Pustki (Free)'
-            }));
-        } catch { return []; }
+    // Storage key per style
+    const storageKey = `sanctuary_locations_${currentStyle}`;
+    const settingsKey = `sanctuary_locations_settings_${currentStyle}`;
+
+    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+    });
+    const [model, setModel] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
     });
 
-    // Save to local storage
+    // Load from local storage (per style)
+    const [results, setResults] = useState<Result[]>(() => {
+        const saved = localStorage.getItem(storageKey);
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    // Save to local storage (per style)
     React.useEffect(() => {
-        localStorage.setItem('sanctuary_location_result', JSON.stringify(results));
-    }, [results]);
+        localStorage.setItem(storageKey, JSON.stringify(results));
+    }, [results, storageKey]);
+
+    // Save settings
+    React.useEffect(() => {
+        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model }));
+    }, [autoRemoveBg, model, settingsKey]);
+
+    // Reload when style changes
+    React.useEffect(() => {
+        const saved = localStorage.getItem(storageKey);
+        setResults(saved ? JSON.parse(saved) : []);
+    }, [currentStyle]);
 
     const getLocationPrefix = () => {
         if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 environment, Night City location, neon-lit urban';

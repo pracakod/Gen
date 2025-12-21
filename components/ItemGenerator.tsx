@@ -23,21 +23,43 @@ export const ItemGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [itemType, setItemType] = useState('Weapon');
   const [loading, setLoading] = useState(false);
-  const [autoRemoveBg, setAutoRemoveBg] = useState(false);
-  const [model, setModel] = useState('free-pollinations');
 
-  // Load from local storage
+  // Storage key per style
+  const storageKey = `sanctuary_items_${currentStyle}`;
+  const settingsKey = `sanctuary_items_settings_${currentStyle}`;
+
+  const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+  });
+  const [model, setModel] = useState(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
+  });
+
+  // Load from local storage (per style)
   const [results, setResults] = useState<Result[]>(() => {
-    const saved = localStorage.getItem('sanctuary_items');
+    const saved = localStorage.getItem(storageKey);
     return saved ? JSON.parse(saved) : [];
   });
 
   const [error, setError] = useState<string | null>(null);
 
-  // Save to local storage
+  // Save to local storage (per style)
   React.useEffect(() => {
-    localStorage.setItem('sanctuary_items', JSON.stringify(results));
-  }, [results]);
+    localStorage.setItem(storageKey, JSON.stringify(results));
+  }, [results, storageKey]);
+
+  // Save settings
+  React.useEffect(() => {
+    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, itemType }));
+  }, [autoRemoveBg, model, itemType, settingsKey]);
+
+  // Reload when style changes
+  React.useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    setResults(saved ? JSON.parse(saved) : []);
+  }, [currentStyle]);
 
   const getItemPrefix = () => {
     if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 item, futuristic';
