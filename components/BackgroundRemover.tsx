@@ -3,16 +3,26 @@ import { DiabloButton } from './DiabloButton';
 
 type RemoveMode = 'contiguous' | 'global';
 
+// Wartości domyślne
+const DEFAULTS = {
+    tolerance: 30,
+    edgeSmooth: 0,
+};
+
 export const BackgroundRemover: React.FC = () => {
     const [image, setImage] = useState<string | null>(null);
     const [history, setHistory] = useState<string[]>([]);
-    const [tolerance, setTolerance] = useState(30);
+    const [tolerance, setTolerance] = useState(DEFAULTS.tolerance);
+    const [edgeSmooth, setEdgeSmooth] = useState(DEFAULTS.edgeSmooth);
     const [mode, setMode] = useState<RemoveMode>('contiguous');
     const [loading, setLoading] = useState(false);
+    const [replaceBg, setReplaceBg] = useState<string | null>(null);
+    const [showGrid, setShowGrid] = useState(true);
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const bgInputRef = useRef<HTMLInputElement>(null);
 
-    // Initial load
     useEffect(() => {
         if (image && canvasRef.current) {
             const ctx = canvasRef.current.getContext('2d');
@@ -37,6 +47,17 @@ export const BackgroundRemover: React.FC = () => {
                 const res = ev.target?.result as string;
                 setImage(res);
                 setHistory([res]);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                setReplaceBg(ev.target?.result as string);
             };
             reader.readAsDataURL(file);
         }
@@ -75,14 +96,12 @@ export const BackgroundRemover: React.FC = () => {
 
         setLoading(true);
 
-        // Allow UI to update before heavy processing
         setTimeout(() => {
             const width = canvas.width;
             const height = canvas.height;
             const imageData = ctx.getImageData(0, 0, width, height);
             const data = imageData.data;
 
-            // Target color
             const targetIndex = (startY * width + startX) * 4;
             const tr = data[targetIndex];
             const tg = data[targetIndex + 1];
@@ -91,19 +110,16 @@ export const BackgroundRemover: React.FC = () => {
             const threshold = tolerance * 2.5;
 
             if (mode === 'global') {
-                // Global Replacement
                 for (let i = 0; i < data.length; i += 4) {
-                    if (data[i + 3] === 0) continue; // Already transparent
+                    if (data[i + 3] === 0) continue;
                     if (getColorDistance(data, i, tr, tg, tb) < threshold) {
                         data[i + 3] = 0;
                     }
                 }
             } else {
-                // Flood Fill (BFS)
                 const queue: [number, number][] = [[startX, startY]];
-                const visited = new Uint8Array(width * height); // 0=unvisited, 1=visited
+                const visited = new Uint8Array(width * height);
 
-                // Helper for index
                 const getIdx = (x: number, y: number) => (y * width + x) * 4;
                 const getVisIdx = (x: number, y: number) => y * width + x;
 
@@ -111,15 +127,12 @@ export const BackgroundRemover: React.FC = () => {
                     const [cx, cy] = queue.shift()!;
                     const idx = getIdx(cx, cy);
 
-                    // If transparent or visited, skip (check visited first!)
                     if (visited[getVisIdx(cx, cy)]) continue;
                     visited[getVisIdx(cx, cy)] = 1;
 
-                    // Check color match
                     if (data[idx + 3] !== 0 && getColorDistance(data, idx, tr, tg, tb) < threshold) {
-                        data[idx + 3] = 0; // Make transparent
+                        data[idx + 3] = 0;
 
-                        // Add neighbors
                         if (cx > 0) queue.push([cx - 1, cy]);
                         if (cx < width - 1) queue.push([cx + 1, cy]);
                         if (cy > 0) queue.push([cx, cy - 1]);
@@ -145,7 +158,47 @@ export const BackgroundRemover: React.FC = () => {
         removeColor(x, y);
     };
 
-    const handleErode = () => {
+    const handleErode = (iterations: number = 1) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        setLoading(true);
+        setTimeout(() => {
+            const width = canvas.width;
+            const height = canvas.height;
+
+            for (let iter = 0; iter < iterations; iter++) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                const oldData = new Uint8ClampedArray(data);
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = (y * width + x) * 4;
+                        if (oldData[idx + 3] > 0) {
+                            let isEdge = false;
+                            if (x > 0 && oldData[idx - 4 + 3] === 0) isEdge = true;
+                            else if (x < width - 1 && oldData[idx + 4 + 3] === 0) isEdge = true;
+                            else if (y > 0 && oldData[idx - width * 4 + 3] === 0) isEdge = true;
+                            else if (y < height - 1 && oldData[idx + width * 4 + 3] === 0) isEdge = true;
+
+                            if (isEdge) {
+                                data[idx + 3] = 0;
+                            }
+                        }
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            const newState = canvas.toDataURL();
+            setHistory(prev => [...prev, newState]);
+            setLoading(false);
+        }, 10);
+    };
+
+    const handleDilate = () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
@@ -155,22 +208,41 @@ export const BackgroundRemover: React.FC = () => {
             const width = canvas.width;
             const height = canvas.height;
             const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data; // reference
-            const oldData = new Uint8ClampedArray(data); // copy
+            const data = imageData.data;
+            const oldData = new Uint8ClampedArray(data);
 
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
-                    if (oldData[idx + 3] > 0) { // If pixel is visible
-                        // Check neighbors
-                        let isEdge = false;
-                        if (x > 0 && oldData[idx - 4 + 3] === 0) isEdge = true;
-                        else if (x < width - 1 && oldData[idx + 4 + 3] === 0) isEdge = true;
-                        else if (y > 0 && oldData[idx - width * 4 + 3] === 0) isEdge = true;
-                        else if (y < height - 1 && oldData[idx + width * 4 + 3] === 0) isEdge = true;
+                    if (oldData[idx + 3] === 0) {
+                        // Sprawdź sąsiadów
+                        let hasVisibleNeighbor = false;
+                        let avgR = 0, avgG = 0, avgB = 0, count = 0;
 
-                        if (isEdge) {
-                            data[idx + 3] = 0; // Erode it
+                        const neighbors = [
+                            [-1, 0], [1, 0], [0, -1], [0, 1]
+                        ];
+
+                        for (const [dx, dy] of neighbors) {
+                            const nx = x + dx;
+                            const ny = y + dy;
+                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                const nIdx = (ny * width + nx) * 4;
+                                if (oldData[nIdx + 3] > 0) {
+                                    hasVisibleNeighbor = true;
+                                    avgR += oldData[nIdx];
+                                    avgG += oldData[nIdx + 1];
+                                    avgB += oldData[nIdx + 2];
+                                    count++;
+                                }
+                            }
+                        }
+
+                        if (hasVisibleNeighbor && count > 0) {
+                            data[idx] = Math.round(avgR / count);
+                            data[idx + 1] = Math.round(avgG / count);
+                            data[idx + 2] = Math.round(avgB / count);
+                            data[idx + 3] = 255;
                         }
                     }
                 }
@@ -183,31 +255,61 @@ export const BackgroundRemover: React.FC = () => {
         }, 10);
     };
 
+    const handleInvert = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        setLoading(true);
+        setTimeout(() => {
+            const width = canvas.width;
+            const height = canvas.height;
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i + 3] === 0) {
+                    data[i + 3] = 255;
+                } else {
+                    data[i + 3] = 0;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            const newState = canvas.toDataURL();
+            setHistory(prev => [...prev, newState]);
+            setLoading(false);
+        }, 10);
+    };
+
+    const ResetButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+        <button
+            onClick={onClick}
+            className="ml-2 px-2 py-0.5 text-[8px] bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white rounded transition-colors"
+            title="Resetuj do domyślnej wartości"
+        >
+            ⟲
+        </button>
+    );
+
     return (
         <div className="flex flex-col gap-6 animate-fade-in">
             <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
                 <div className="flex justify-between items-center mb-4">
-                    <label className="font-diablo text-green-500 text-[10px] uppercase">Oczyszczalnia Artefaktów</label>
+                    <label className="font-diablo text-green-500 text-[10px] uppercase">🧹 Usuwanie Tła</label>
                     <div className="flex gap-2">
                         <button
                             onClick={handleUndo}
                             disabled={history.length <= 1}
                             className="bg-black border border-stone-700 text-stone-400 px-3 py-1 text-[10px] uppercase hover:bg-stone-800 disabled:opacity-50"
                         >
-                            Cofnij
+                            ↩ Cofnij
                         </button>
                         <button
-                            onClick={handleErode}
-                            disabled={!image || loading}
-                            className="bg-black border border-stone-700 text-stone-400 px-3 py-1 text-[10px] uppercase hover:bg-stone-800 disabled:opacity-50"
-                        >
-                            Zmniejsz Krawędź
-                        </button>
-                        <button
-                            onClick={() => { setImage(null); setHistory([]); }}
+                            onClick={() => { setImage(null); setHistory([]); setReplaceBg(null); }}
                             className="bg-red-900/20 border border-red-900/50 text-red-500 px-3 py-1 text-[10px] uppercase hover:bg-red-900/40"
                         >
-                            Reset
+                            🗑 Wyczyść
                         </button>
                     </div>
                 </div>
@@ -217,7 +319,7 @@ export const BackgroundRemover: React.FC = () => {
                         onClick={() => fileInputRef.current?.click()}
                         className="border-2 border-dashed border-stone-700 p-12 text-center cursor-pointer hover:border-green-500/50 transition-colors bg-black/50"
                     >
-                        <p className="text-stone-500 text-xs font-serif">Kliknij, aby wgrać skażony artefakt</p>
+                        <p className="text-stone-500 text-xs font-serif">📷 Kliknij, aby wgrać obraz</p>
                         <input
                             type="file"
                             accept="image/*"
@@ -230,47 +332,122 @@ export const BackgroundRemover: React.FC = () => {
 
                 {image && (
                     <div className="flex flex-col gap-4">
-                        <div className="flex flex-col md:flex-row items-center gap-4 bg-black p-3 border border-stone-800">
-                            <div className="flex items-center gap-2 w-full md:w-auto">
-                                <label className="text-stone-400 text-[10px] uppercase whitespace-nowrap">Moc ({tolerance})</label>
+                        {/* Panel narzędzi */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black p-4 border border-stone-800 rounded">
+                            {/* Tolerancja */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-stone-400 text-[10px] uppercase">Tolerancja: {tolerance}</span>
+                                    <ResetButton onClick={() => setTolerance(DEFAULTS.tolerance)} />
+                                </div>
                                 <input
                                     type="range"
                                     min="1"
                                     max="100"
                                     value={tolerance}
                                     onChange={(e) => setTolerance(parseInt(e.target.value))}
-                                    className="w-full md:w-32 accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
                                 />
                             </div>
 
-                            <div className="flex items-center gap-2 border-l border-stone-800 pl-4">
-                                <span className="text-stone-500 text-[10px] uppercase">Tryb:</span>
-                                <button
-                                    onClick={() => setMode('contiguous')}
-                                    className={`px-2 py-1 text-[10px] uppercase border ${mode === 'contiguous' ? 'border-green-500 text-green-500 bg-green-900/20' : 'border-stone-700 text-stone-500'}`}
-                                >
-                                    Różdżka
-                                </button>
-                                <button
-                                    onClick={() => setMode('global')}
-                                    className={`px-2 py-1 text-[10px] uppercase border ${mode === 'global' ? 'border-blue-500 text-blue-500 bg-blue-900/20' : 'border-stone-700 text-stone-500'}`}
-                                >
-                                    Globalny
-                                </button>
-                            </div>
-
-                            <div className="flex items-center gap-2 border-l border-stone-800 pl-4">
-                                <button
-                                    onClick={handleErode}
-                                    title="Usuwa 1px z krawędzi (na zieloną obwódkę)"
-                                    className="px-2 py-1 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors"
-                                >
-                                    Zmniejsz Krawędź
-                                </button>
+                            {/* Tryb */}
+                            <div>
+                                <span className="text-stone-400 text-[10px] uppercase block mb-1">Tryb usuwania</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setMode('contiguous')}
+                                        className={`flex-1 px-2 py-1 text-[10px] uppercase border ${mode === 'contiguous' ? 'border-green-500 text-green-500 bg-green-900/20' : 'border-stone-700 text-stone-500'}`}
+                                    >
+                                        🪄 Różdżka
+                                    </button>
+                                    <button
+                                        onClick={() => setMode('global')}
+                                        className={`flex-1 px-2 py-1 text-[10px] uppercase border ${mode === 'global' ? 'border-blue-500 text-blue-500 bg-blue-900/20' : 'border-stone-700 text-stone-500'}`}
+                                    >
+                                        🌐 Globalny
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="relative border border-stone-700 bg-checkerboard overflow-hidden flex justify-center bg-stone-900">
+                        {/* Narzędzia krawędzi */}
+                        <div className="flex flex-wrap gap-2 bg-black/50 p-3 border border-stone-800 rounded">
+                            <span className="text-stone-500 text-[10px] uppercase w-full mb-2">Narzędzia krawędzi:</span>
+                            <button
+                                onClick={() => handleErode(1)}
+                                disabled={loading}
+                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors disabled:opacity-50"
+                            >
+                                ➖ Zmniejsz (1px)
+                            </button>
+                            <button
+                                onClick={() => handleErode(3)}
+                                disabled={loading}
+                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors disabled:opacity-50"
+                            >
+                                ➖ Zmniejsz (3px)
+                            </button>
+                            <button
+                                onClick={handleDilate}
+                                disabled={loading}
+                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-cyan-500 hover:bg-cyan-900/20 transition-colors disabled:opacity-50"
+                            >
+                                ➕ Powiększ (1px)
+                            </button>
+                            <button
+                                onClick={handleInvert}
+                                disabled={loading}
+                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-purple-500 hover:bg-purple-900/20 transition-colors disabled:opacity-50"
+                            >
+                                🔄 Odwróć maskę
+                            </button>
+                        </div>
+
+                        {/* Opcje wyświetlania */}
+                        <div className="flex items-center gap-4 bg-black/50 p-3 border border-stone-800 rounded">
+                            <label className="flex items-center gap-2 text-[10px] text-stone-400 uppercase cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={showGrid}
+                                    onChange={(e) => setShowGrid(e.target.checked)}
+                                    className="accent-green-500"
+                                />
+                                Pokaż siatkę przezroczystości
+                            </label>
+                            <button
+                                onClick={() => bgInputRef.current?.click()}
+                                className="px-3 py-1 text-[10px] uppercase border border-stone-700 text-stone-400 hover:bg-stone-800"
+                            >
+                                🖼 Zastąp tło obrazem
+                            </button>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleBgUpload}
+                                className="hidden"
+                                ref={bgInputRef}
+                            />
+                            {replaceBg && (
+                                <button
+                                    onClick={() => setReplaceBg(null)}
+                                    className="px-2 py-1 text-[10px] text-red-400 hover:text-red-300"
+                                >
+                                    ✕ Usuń tło
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Canvas */}
+                        <div
+                            className="relative border border-stone-700 overflow-hidden flex justify-center"
+                            style={{
+                                background: showGrid && !replaceBg
+                                    ? 'repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 20px 20px'
+                                    : replaceBg
+                                        ? `url(${replaceBg}) center/cover`
+                                        : '#1a1a1a'
+                            }}
+                        >
                             <canvas
                                 ref={canvasRef}
                                 onClick={handleCanvasClick}
@@ -278,19 +455,22 @@ export const BackgroundRemover: React.FC = () => {
                             />
                             {loading && (
                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                    <span className="text-green-500 font-diablo animate-pulse">Oczyszczanie...</span>
+                                    <span className="text-green-500 font-diablo animate-pulse">Przetwarzanie...</span>
                                 </div>
                             )}
                         </div>
-                        <p className="text-center text-[10px] text-stone-500 uppercase">Kliknij na kolor, aby go usunąć ({mode === 'contiguous' ? 'Sąsiadujące' : 'Wszystkie'})</p>
 
-                        <div className="flex justify-center">
+                        <p className="text-center text-[10px] text-stone-500 uppercase">
+                            🎯 Kliknij na kolor, aby go usunąć ({mode === 'contiguous' ? 'Sąsiadujące piksele' : 'Wszystkie pasujące piksele'})
+                        </p>
+
+                        <div className="flex justify-center gap-4">
                             <a
                                 href={history[history.length - 1]}
-                                download="cleaned_artifact.png"
+                                download="obraz_bez_tla.png"
                                 className="border border-green-900 text-green-500 px-8 py-2 font-diablo text-xs uppercase hover:bg-green-900/20 transition-colors"
                             >
-                                Pobierz Wynik
+                                📥 Pobierz PNG
                             </a>
                         </div>
                     </div>
