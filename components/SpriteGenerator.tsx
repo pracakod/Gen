@@ -102,6 +102,7 @@ export const SpriteGenerator: React.FC = () => {
     const [gridCols, setGridCols] = useState(3);
     const [animatingFrames, setAnimatingFrames] = useState<string[] | null>(null);
     const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+    const [animationFPS, setAnimationFPS] = useState(10);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Pobierz tagi dla aktualnego stylu
@@ -281,9 +282,9 @@ export const SpriteGenerator: React.FC = () => {
         if (!animatingFrames) return;
         const interval = setInterval(() => {
             setCurrentFrameIndex(prev => (prev + 1) % animatingFrames.length);
-        }, 120); // ~8 FPS
+        }, 1000 / animationFPS);
         return () => clearInterval(interval);
-    }, [animatingFrames]);
+    }, [animatingFrames, animationFPS]);
 
     const handleSlice = async (result: SpriteResult, mode: 'grid' | 'smart') => {
         try {
@@ -748,7 +749,7 @@ export const SpriteGenerator: React.FC = () => {
                                 </div>
                                 <button
                                     onClick={() => removeResult(r.id)}
-                                    className="absolute top-0 right-0 bg-red-900/80 text-white text-[10px] px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute -top-2 -right-2 bg-red-900 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-50 border border-red-800 shadow-lg hover:bg-red-700"
                                 >
                                     ×
                                 </button>
@@ -778,6 +779,24 @@ export const SpriteGenerator: React.FC = () => {
                         <p className="mt-4 text-stone-500 text-[10px] uppercase tracking-widest font-serif">
                             Klatka {currentFrameIndex + 1} z {animatingFrames.length}
                         </p>
+
+                        <div className="mt-6 w-full flex flex-col items-center gap-2">
+                            <label className="text-amber-600 text-[9px] uppercase font-serif tracking-widest">
+                                Szybkość Duchów: {animationFPS} FPS
+                            </label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="60"
+                                value={animationFPS}
+                                onChange={(e) => setAnimationFPS(parseInt(e.target.value))}
+                                className="w-full h-1 bg-stone-800 appearance-none cursor-pointer accent-amber-600 rounded-lg"
+                            />
+                            <div className="flex justify-between w-full text-[8px] text-stone-600 uppercase font-serif px-1">
+                                <span>Powoli</span>
+                                <span>Błyskawicznie</span>
+                            </div>
+                        </div>
                         <button
                             onClick={() => setAnimatingFrames(null)}
                             className="mt-8 px-8 py-2 bg-amber-900/40 text-amber-200 border border-amber-900/50 hover:bg-amber-900/60 transition-all uppercase text-[10px] tracking-widest font-bold"
