@@ -1,51 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sanctuary Avatar Forge</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              diablo: ['"Cinzel Decorative"', 'serif'],
-              serif: ['"Cinzel"', 'serif'],
-              sans: ['"Lato"', 'sans-serif'],
-            },
-            colors: {
-              sanctuary: {
-                900: '#0c0a09', // Stone dark
-                800: '#1c1917',
-                red: '#7f1d1d', // Blood red
-                gold: '#b45309', // Muted gold
-                accent: '#f59e0b', // Bright gold
-              }
-            },
-            backgroundImage: {
-              'diablo-pattern': "radial-gradient(circle at center, #1c1917 0%, #000000 100%)",
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sanctuary Avatar Forge</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&family=Lato:wght@300;400;700&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            diablo: ['"Cinzel Decorative"', 'serif'],
+            serif: ['"Cinzel"', 'serif'],
+            sans: ['"Lato"', 'sans-serif'],
+          },
+          colors: {
+            sanctuary: {
+              900: '#0c0a09', // Stone dark
+              800: '#1c1917',
+              red: '#7f1d1d', // Blood red
+              gold: '#b45309', // Muted gold
+              accent: '#f59e0b', // Bright gold
             }
+          },
+          backgroundImage: {
+            'diablo-pattern': "radial-gradient(circle at center, #1c1917 0%, #000000 100%)",
           }
         }
       }
-    </script>
-    <style>
-      body {
-        background-color: #000;
-        color: #e5e5e5;
-      }
-      .diablo-border {
-        border: 2px solid #444;
-        border-image: linear-gradient(to bottom, #b45309, #7f1d1d, #000) 1;
-      }
-      .blood-text {
-        text-shadow: 0 0 5px rgba(220, 38, 38, 0.5);
-      }
-    </style>
+    }
+  </script>
+  <style>
+    body {
+      background-color: #000;
+      color: #e5e5e5;
+    }
+
+    .diablo-border {
+      border: 2px solid #444;
+      border-image: linear-gradient(to bottom, #b45309, #7f1d1d, #000) 1;
+    }
+
+    .blood-text {
+      text-shadow: 0 0 5px rgba(220, 38, 38, 0.5);
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -56,10 +62,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
+
+<body>
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
