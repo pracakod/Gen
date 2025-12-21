@@ -83,6 +83,17 @@ export const SpriteGenerator: React.FC = () => {
         return saved ? JSON.parse(saved) : [];
     });
 
+    // Tryb generowania: 'single' (osobno) lub 'sheet' (wszystko na jednym)
+    const [genMode, setGenMode] = useState<'single' | 'sheet'>(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).genMode ?? 'single' : 'single';
+    });
+
+    const [autoRemoveBg, setAutoRemoveBg] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).autoRemoveBg ?? false : false;
+    });
+
     const [loading, setLoading] = useState(false);
     const [currentDirection, setCurrentDirection] = useState<string | null>(null);
 
@@ -95,8 +106,8 @@ export const SpriteGenerator: React.FC = () => {
 
     // Zapisz ustawienia
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ tags: selectedTags, model, customPrompt }));
-    }, [selectedTags, model, customPrompt, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ tags: selectedTags, model, customPrompt, genMode, autoRemoveBg }));
+    }, [selectedTags, model, customPrompt, genMode, autoRemoveBg, settingsKey]);
 
     // Zapisz wyniki
     React.useEffect(() => {
@@ -128,6 +139,10 @@ export const SpriteGenerator: React.FC = () => {
         );
     };
 
+    const selectAllDirections = () => {
+        setSelectedDirections(DIRECTIONS.map(d => d.id));
+    };
+
     // Buduj bazową część promptu (bez kierunku)
     const getBasePrompt = () => {
         const parts: string[] = [];
@@ -155,39 +170,69 @@ export const SpriteGenerator: React.FC = () => {
         return `${stylePrefix}, ${baseDesc}`;
     };
 
-    // Buduj pełny prompt dla konkretnego kierunku
+    // Buduj pełny prompt dla konkretnego kierunku lub arkusza
     const buildPrompt = (directionAngle: string) => {
         const base = getBasePrompt();
-        return `${base}, ${directionAngle}, full body, centered, single character, ${styleConfig.artStyle}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
+
+        const bgPrompt = autoRemoveBg
+            ? "on pure white background, isolated on white, cut out, empty background"
+            : "on solid pure neon green background #00FF00";
+
+        if (genMode === 'sheet') {
+            const selectedLabels = selectedDirections.map(id => DIRECTIONS.find(d => d.id === id)?.label).join(', ');
+            const allInOneNote = "COMPOSITE IMAGE, ALL VIEW ANGLES SHOWN TOGETHER ON ONE SINGLE IMAGE,";
+            return `SPRITE SHEET, ${allInOneNote} ${base}, multiple views including: ${selectedLabels}, character shown from different angles in a grid, full body, centered, ${styleConfig.artStyle}, ${bgPrompt}, high quality game asset, NO TEXT, ${styleConfig.negative}`;
+        }
+
+        return `${base}, ${directionAngle}, full body, centered, single character, ${styleConfig.artStyle}, ${bgPrompt}, NO TEXT, ${styleConfig.negative}`;
     };
 
-    // Generuj dla wybranych kierunków
+    // Generuj
     const handleGenerate = async () => {
         if (selectedDirections.length === 0) return;
 
         setLoading(true);
 
-        for (const dirId of selectedDirections) {
-            const dir = DIRECTIONS.find(d => d.id === dirId);
-            if (!dir) continue;
-
-            setCurrentDirection(dirId);
-            const prompt = buildPrompt(dir.angle);
+        if (genMode === 'sheet') {
+            const prompt = buildPrompt('');
+            setCurrentDirection('arkusz');
 
             try {
                 const { url, modelUsed } = await generateAvatar(prompt, model);
-                // Usuń zielone tło
                 let finalUrl = url;
                 try {
-                    finalUrl = await removeBackground(url, 'green');
+                    finalUrl = await removeBackground(url, autoRemoveBg ? 'white' : 'green');
                 } catch (e) { }
 
                 setResults(prev => [
-                    { id: `${Date.now()}_${dirId}`, direction: dirId, url: finalUrl, modelUsed },
+                    { id: `${Date.now()}_sheet`, direction: 'sheet', url: finalUrl, modelUsed },
                     ...prev
                 ]);
             } catch (e) {
-                console.error(`Błąd generowania ${dirId}:`, e);
+                console.error("Błąd generowania arkusza:", e);
+            }
+        } else {
+            for (const dirId of selectedDirections) {
+                const dir = DIRECTIONS.find(d => d.id === dirId);
+                if (!dir) continue;
+
+                setCurrentDirection(dirId);
+                const prompt = buildPrompt(dir.angle);
+
+                try {
+                    const { url, modelUsed } = await generateAvatar(prompt, model);
+                    let finalUrl = url;
+                    try {
+                        finalUrl = await removeBackground(url, autoRemoveBg ? 'white' : 'green');
+                    } catch (e) { }
+
+                    setResults(prev => [
+                        { id: `${Date.now()}_${dirId}`, direction: dirId, url: finalUrl, modelUsed },
+                        ...prev
+                    ]);
+                } catch (e) {
+                    console.error(`Błąd generowania ${dirId}:`, e);
+                }
             }
         }
 
@@ -203,6 +248,27 @@ export const SpriteGenerator: React.FC = () => {
     // Wyczyść wszystko
     const clearAll = () => {
         setResults([]);
+    };
+
+    // Obługa pobierania (rozwiązuje problem cross-origin)
+    const handleDownload = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            console.error("Błąd pobierania:", e);
+            // Fallback do starej metody jeśli fetch zawiedzie
+            window.open(url, '_blank');
+        }
     };
 
     // Pobierz tekst przycisku
@@ -228,14 +294,36 @@ export const SpriteGenerator: React.FC = () => {
                     <label className="font-diablo text-amber-500 text-[10px] uppercase block">
                         {getLabelForStyle()}
                     </label>
-                    <select
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                        className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none"
-                    >
-                        <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
-                        <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
-                    </select>
+                    <div className="flex gap-4 items-center">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="autoTransparentSprite"
+                                checked={autoRemoveBg}
+                                onChange={(e) => setAutoRemoveBg(e.target.checked)}
+                                className="accent-emerald-600 cursor-pointer"
+                            />
+                            <label htmlFor="autoTransparentSprite" className="text-emerald-500 text-[9px] uppercase font-serif cursor-pointer hover:text-emerald-400">
+                                Przezroczyste Tło
+                            </label>
+                        </div>
+                        <select
+                            value={genMode}
+                            onChange={(e) => setGenMode(e.target.value as 'single' | 'sheet')}
+                            className="bg-black text-amber-600 text-[10px] p-2 border border-amber-900 outline-none"
+                        >
+                            <option value="single">Osobne Obrazy</option>
+                            <option value="sheet">Jeden Arkusz (Sprite Sheet)</option>
+                        </select>
+                        <select
+                            value={model}
+                            onChange={(e) => setModel(e.target.value)}
+                            className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none"
+                        >
+                            <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
+                            <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
+                        </select>
+                    </div>
                 </div>
 
                 {/* Własny Prompt */}
@@ -353,7 +441,15 @@ export const SpriteGenerator: React.FC = () => {
                 {/* Wybór kierunków i Główny Prompt */}
                 <div className="flex flex-col lg:flex-row gap-6 mb-6">
                     <div className="flex-1">
-                        <label className="text-stone-500 text-[9px] uppercase mb-2 block">Kierunki (kliknij aby wybrać)</label>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-stone-500 text-[9px] uppercase block">Kierunki (kliknij aby wybrać)</label>
+                            <button
+                                onClick={selectAllDirections}
+                                className="text-amber-600 text-[8px] uppercase border border-amber-900/30 px-2 py-0.5 hover:bg-amber-900/20 transition-colors"
+                            >
+                                Zaznacz wszystkie
+                            </button>
+                        </div>
                         <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-4 gap-1">
                             {DIRECTIONS.map(dir => (
                                 <button
@@ -370,7 +466,7 @@ export const SpriteGenerator: React.FC = () => {
                             ))}
                         </div>
                         <p className="text-stone-600 text-[8px] text-center mt-2">
-                            Wybrano: {selectedDirections.length} kierunków
+                            Wybrano: {selectedDirections.length} kierunków {selectedDirections.length === DIRECTIONS.length && "(Wszystkie)"}
                         </p>
                     </div>
 
@@ -382,14 +478,17 @@ export const SpriteGenerator: React.FC = () => {
                         <div className="mt-2 pt-2 border-t border-stone-800/50">
                             <p className="text-[8px] text-stone-600 uppercase">Dodatki techniczne:</p>
                             <p className="text-[8px] text-stone-700 font-mono">
-                                + [Kierunek], full body, centered, {styleConfig.artStyle}, neon green bg...
+                                {genMode === 'sheet'
+                                    ? `+ SPRITE SHEET, grid of views (${selectedDirections.length}), ${autoRemoveBg ? 'white bg' : 'neon green bg'}...`
+                                    : `+ [Kierunek], full body, centered, ${styleConfig.artStyle}, ${autoRemoveBg ? 'white bg' : 'neon green bg'}...`
+                                }
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Skrócony podgląd kierunkowy */}
-                {selectedDirections.length > 0 && (
+                {selectedDirections.length > 0 && genMode === 'single' && (
                     <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {selectedDirections.slice(0, 4).map(dirId => {
                             const dir = DIRECTIONS.find(d => d.id === dirId);
@@ -405,6 +504,16 @@ export const SpriteGenerator: React.FC = () => {
                                 ...i {selectedDirections.length - 4} więcej kierunków
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Podgląd dla arkusza */}
+                {selectedDirections.length > 0 && genMode === 'sheet' && (
+                    <div className="mb-4 p-2 bg-amber-900/10 border border-amber-900/30">
+                        <p className="text-[9px] text-amber-500 uppercase mb-1">Pełny prompt arkusza:</p>
+                        <p className="text-[10px] text-stone-400 italic font-serif leading-tight">
+                            {buildPrompt('')}
+                        </p>
                     </div>
                 )}
 
@@ -446,13 +555,13 @@ export const SpriteGenerator: React.FC = () => {
                                 >
                                     ×
                                 </button>
-                                <a
-                                    href={r.url}
-                                    download={`sprite_${currentStyle}_${r.direction}.png`}
+                                <button
+                                    onClick={() => handleDownload(r.url, `sprite_${currentStyle}_${r.direction}.png`)}
                                     className="absolute top-0 left-0 bg-stone-900/80 text-stone-300 text-[8px] px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Pobierz PNG"
                                 >
                                     ↓
-                                </a>
+                                </button>
                             </div>
                         ))}
                     </div>

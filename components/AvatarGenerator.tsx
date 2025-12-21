@@ -1,10 +1,31 @@
 import React, { useState } from 'react';
-import { createToken, erodeImage, removeBackground } from '../services/imageProcessing';
+import { createToken, erodeImage, removeBackground, downloadImage } from '../services/imageProcessing';
 import { enhanceUserPrompt } from '../services/prompts';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
 import { useStyle } from '../contexts/StyleContext';
+
+const HERO_TAGS = {
+  diablo: {
+    race: ['Człowiek', 'Nieumarły', 'Demon', 'Anioł', 'Upadły'],
+    class: ['Wojownik', 'Mag', 'Łucznik', 'Paladyn', 'Nekromanta', 'Druid'],
+    trait: ['Płonący', 'Mroźny', 'Złoty', 'Skażony', 'Eteryczny'],
+    render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt']
+  },
+  cyberpunk: {
+    race: ['Człowiek', 'Cyborg', 'Android', 'Syntetyk', 'Haker'],
+    class: ['Netrunner', 'Solo', 'Techie', 'Fixer', 'Mercenary'],
+    trait: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny', 'Wirtualny'],
+    render: ['In-Game Tool', 'Blender 3D', 'Cinematic', 'Voxel']
+  },
+  pixelart: {
+    race: ['Człowiek', 'Elf', 'Krasnolud', 'Ork', 'Szkielet'],
+    class: ['Rycerz', 'Czarodziej', 'Złodziej', 'Kapłan', 'Ranger'],
+    trait: ['8-bitowy', 'Legendarny', 'Ognisty', 'Leśny', 'Przeklęty'],
+    render: ['Sprite Sheet', 'Blender 3D', 'Retro Render', 'HD-2D']
+  }
+};
 
 interface Result {
   id: string;
@@ -57,10 +78,22 @@ export const AvatarGenerator: React.FC = () => {
     localStorage.setItem(storageKey, JSON.stringify(results));
   }, [results, storageKey]);
 
+  const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem(settingsKey);
+    return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+  });
+
   // Save settings to local storage
   React.useEffect(() => {
-    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, genMale, genFemale, model }));
-  }, [autoRemoveBg, genMale, genFemale, model, settingsKey]);
+    localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, genMale, genFemale, model, selectedTags }));
+  }, [autoRemoveBg, genMale, genFemale, model, selectedTags, settingsKey]);
+
+  const toggleTag = (category: string, value: string) => {
+    setSelectedTags(prev => ({
+      ...prev,
+      [category]: prev[category] === value ? '' : value
+    }));
+  };
 
   // Reload data when style changes
   React.useEffect(() => {
@@ -69,13 +102,30 @@ export const AvatarGenerator: React.FC = () => {
   }, [currentStyle]);
 
   const getFullPromptForGender = (gender: 'Male' | 'Female') => {
-    const enhancedUserText = enhanceUserPrompt(prompt || '[opis]', 'character');
+    const parts = [];
+    if (selectedTags.race) parts.push(selectedTags.race);
+    if (selectedTags.class) parts.push(selectedTags.class);
+    if (selectedTags.trait) parts.push(selectedTags.trait);
 
-    if (autoRemoveBg) {
-      return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, NO TEXT, ${styleConfig.negative}`;
+    let renderStyle = styleConfig.artStyle;
+    if (selectedTags.render === 'Blender 3D') {
+      renderStyle = "3D character model rendered in Blender, Octane Render, Cycles engine, high poly, highly detailed PBR textures, game character preview, professional studio lighting, A-pose stance, clear silhouette";
+    } else if (selectedTags.render) {
+      parts.push(selectedTags.render);
     }
 
-    return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, on solid pure neon green background #00FF00, flat lighting on background, NO TEXT, NO GREEN CLOTHING`;
+    if (prompt) parts.push(prompt);
+
+    const baseText = parts.length > 0 ? parts.join(', ') : '[opis]';
+    const enhancedUserText = enhanceUserPrompt(baseText, 'character');
+    const fitInFrame = "full body shot, entire character must be fully visible and contained within the frame, not cut off, head and feet must be visible, centered composition";
+    const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
+
+    if (autoRemoveBg) {
+      return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, NO TEXT, ${styleConfig.negative}`;
+    }
+
+    return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, ${styleConfig.environment}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, NO GREEN CLOTHING`;
   };
 
   const getPlaceholder = () => {
@@ -244,11 +294,35 @@ export const AvatarGenerator: React.FC = () => {
           </div>
         </div>
 
+        <div className="space-y-4 mb-6">
+          {Object.entries(HERO_TAGS[currentStyle as keyof typeof HERO_TAGS]).map(([category, values]) => (
+            <div key={category}>
+              <label className="text-stone-500 text-[9px] uppercase mb-1 block">
+                {category === 'race' ? 'Rasa' : category === 'class' ? 'Klasa' : category === 'trait' ? 'Atrybut' : 'Styl Renderu'}
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {values.map(val => (
+                  <button
+                    key={val}
+                    onClick={() => toggleTag(category, val)}
+                    className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
+                      ? 'bg-red-900/40 border-red-600 text-red-200'
+                      : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                      }`}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder={getPlaceholder()}
-          className="w-full bg-black border border-stone-800 p-4 text-stone-200 mb-6 outline-none focus:border-red-900 min-h-[100px]"
+          className="w-full bg-black border border-stone-800 p-4 text-stone-200 mb-6 outline-none focus:border-red-900 min-h-[80px]"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -299,23 +373,7 @@ export const AvatarGenerator: React.FC = () => {
                   Token
                 </button>
                 <button
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(res.url);
-                      const blob = await response.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `sanctuary_${res.id}.png`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      window.URL.revokeObjectURL(url);
-                    } catch (e) {
-                      console.error("Download failed", e);
-                      window.open(res.url, '_blank');
-                    }
-                  }}
+                  onClick={() => downloadImage(res.url, `sanctuary_avatar_${res.id}.png`)}
                   className="bg-black text-stone-600 text-[8px] uppercase p-1 border border-stone-800 hover:text-white flex-1 text-center"
                 >
                   Zapisz

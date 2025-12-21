@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
 // ...
@@ -252,7 +252,12 @@ export const ItemGenerator: React.FC = () => {
                 >
                   Token
                 </button>
-                <a href={res.url} download={`sanctuary_item_${res.id}.png`} className="block flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase p-2 hover:bg-stone-800 border border-stone-800">Pobierz</a>
+                <button
+                  onClick={() => downloadImage(res.url, `sanctuary_item_${res.id}.png`)}
+                  className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase p-2 hover:bg-stone-800 border border-stone-800"
+                >
+                  Pobierz
+                </button>
               </div>
               <button
                 onClick={() => setResults(prev => prev.filter(r => r.id !== res.id))}

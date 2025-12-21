@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
@@ -190,7 +190,12 @@ export const PetGenerator: React.FC = () => {
                             >
                                 Token
                             </button>
-                            <a href={res.url} download className="flex-1 text-center text-teal-700 hover:text-teal-500 text-[9px] uppercase border border-teal-900/20 py-1">Adoptuj</a>
+                            <button
+                                onClick={() => downloadImage(res.url, `sanctuary_pet_${res.id}.png`)}
+                                className="flex-1 text-center bg-stone-900 text-teal-700 text-[8px] uppercase py-1 border border-teal-900/20 hover:text-white"
+                            >
+                                Adoptuj
+                            </button>
                             <button onClick={() => setResults(prev => prev.filter((r) => r.id !== res.id))} className="text-red-900 hover:text-red-600 text-[9px] uppercase px-2 border border-red-900/20">X</button>
                         </div>
                     </div>

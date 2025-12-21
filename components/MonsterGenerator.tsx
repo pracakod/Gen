@@ -2,8 +2,26 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
+
+const MONSTER_TAGS = {
+    diablo: {
+        type: ['Bestia', 'Demon', 'Nieumarły', 'Kultysta', 'Aberracja'],
+        element: ['Ogień', 'Mróz', 'Błyskawice', 'Trucizna', 'Krew', 'Cień'],
+        tier: ['Zwykły', 'Elitarny', 'Boss', 'Legendarny']
+    },
+    cyberpunk: {
+        type: ['Cyborg', 'Dron', 'Android', 'Zmutowany', 'Mech'],
+        element: ['Elektryczny', 'Termiczny', 'Próżniowy', 'Zglitchowany'],
+        tier: ['Mob', 'Veteran', 'Boss unit', 'Night City Legend']
+    },
+    pixelart: {
+        type: ['Slime', 'Szkielet', 'Gólem', 'Smok', 'Duch'],
+        element: ['Ogień', 'Lód', 'Magia', 'Zło', 'Fizyczny'],
+        tier: ['Level 1', 'Elite', 'Mini-boss', 'Final Boss']
+    }
+};
 
 
 interface Result {
@@ -44,10 +62,22 @@ export const MonsterGenerator: React.FC = () => {
         localStorage.setItem(storageKey, JSON.stringify(results));
     }, [results, storageKey]);
 
+    const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+    });
+
     // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model }));
-    }, [autoRemoveBg, model, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ autoRemoveBg, model, selectedTags }));
+    }, [autoRemoveBg, model, selectedTags, settingsKey]);
+
+    const toggleTag = (category: string, value: string) => {
+        setSelectedTags(prev => ({
+            ...prev,
+            [category]: prev[category] === value ? '' : value
+        }));
+    };
 
     // Reload when style changes
     React.useEffect(() => {
@@ -62,10 +92,20 @@ export const MonsterGenerator: React.FC = () => {
     };
 
     const getFullPrompt = () => {
+        const parts = [getMonsterPrefix()];
+        if (selectedTags.type) parts.push(selectedTags.type);
+        if (selectedTags.element) parts.push(selectedTags.element);
+        if (selectedTags.tier) parts.push(selectedTags.tier);
+        if (prompt) parts.push(prompt);
+
+        const baseText = parts.join(', ');
+        const fitInFrame = "full character view, must be fully visible within the frame, not cut off, head to feet visible, centered";
+        const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
+
         if (autoRemoveBg) {
-            return `${getMonsterPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
+            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `${getMonsterPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
+        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {
@@ -158,6 +198,30 @@ export const MonsterGenerator: React.FC = () => {
                     </select>
                 </div>
 
+                <div className="space-y-4 mb-4">
+                    {Object.entries(MONSTER_TAGS[currentStyle as keyof typeof MONSTER_TAGS]).map(([category, values]) => (
+                        <div key={category}>
+                            <label className="text-stone-500 text-[9px] uppercase mb-1 block">
+                                {category === 'type' ? 'Typ' : category === 'element' ? 'Żywioł/Atrybut' : 'Ranga'}
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                                {values.map(val => (
+                                    <button
+                                        key={val}
+                                        onClick={() => toggleTag(category, val)}
+                                        className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
+                                            ? 'bg-red-900/40 border-red-600 text-red-200'
+                                            : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
+                                            }`}
+                                    >
+                                        {val}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
                 <input
                     type="text"
                     value={prompt}
@@ -198,7 +262,12 @@ export const MonsterGenerator: React.FC = () => {
                             >
                                 Token
                             </button>
-                            <a href={r.url} download={`sanctuary_monster_${r.id}.png`} className="flex-1 text-center text-[8px] text-stone-500 uppercase py-1 hover:text-stone-300 border border-stone-800 bg-stone-900">Pobierz</a>
+                            <button
+                                onClick={() => downloadImage(r.url, `sanctuary_monster_${r.id}.png`)}
+                                className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase p-2 hover:bg-stone-800 border border-stone-800"
+                            >
+                                Pobierz
+                            </button>
                             <button
                                 onClick={() => setResults(prev => prev.filter(res => res.id !== r.id))}
                                 className="text-center text-[8px] text-red-500 uppercase py-1 px-2 hover:bg-red-900/20 border border-red-900/30"

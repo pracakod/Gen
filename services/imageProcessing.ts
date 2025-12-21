@@ -167,3 +167,22 @@ export const createToken = async (imageUrl: string): Promise<string> => {
         img.onerror = reject;
     });
 };
+
+export const downloadImage = async (url: string, filename: string) => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+        console.error("Błąd pobierania:", e);
+        window.open(url, '_blank');
+    }
+};

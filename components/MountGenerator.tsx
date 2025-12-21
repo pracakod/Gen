@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
@@ -190,7 +190,12 @@ export const MountGenerator: React.FC = () => {
                             >
                                 Token
                             </button>
-                            <a href={res.url} download={`mount_${res.id}.png`} className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase py-1 border border-stone-800 hover:text-white">Zapisz</a>
+                            <button
+                                onClick={() => downloadImage(res.url, `sanctuary_mount_${res.id}.png`)}
+                                className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase py-1 border border-stone-800 hover:text-white"
+                            >
+                                Zapisz
+                            </button>
                             <button onClick={() => setResults(prev => prev.filter((r) => r.id !== res.id))} className="bg-red-900/80 text-white px-2 py-1 text-[10px] uppercase border border-red-900">X</button>
                         </div>
                     </div>

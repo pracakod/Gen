@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { removeBackground, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
@@ -175,7 +174,7 @@ export const LocationGenerator: React.FC = () => {
                     <div key={r.id} className="border-4 border-double border-stone-800 p-1 bg-black shadow-[0_0_50px_rgba(0,0,0,1)] relative flex flex-col gap-1">
                         <span className="absolute top-2 left-2 bg-black/60 text-[8px] text-stone-500 px-1 border border-stone-800 z-10 font-serif">Moc: {r.modelUsed}</span>
                         <div className="relative overflow-hidden bg-black bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)]">
-                            <img src={r.url} className={`w-full h-full object-contain transition-opacity ${r.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
+                            <img src={r.url} className={`w - full h - full object - contain transition - opacity ${r.isRemovingBg ? 'opacity-30' : 'opacity-100'} `} />
                         </div>
 
                         <div className="flex justify-between items-center bg-stone-900/50 p-1 border border-stone-800">
@@ -197,7 +196,12 @@ export const LocationGenerator: React.FC = () => {
                                 >
                                     Token
                                 </button>
-                                <a href={r.url} download={`sanctuary_location_${r.id}.png`} className="flex-1 text-center bg-stone-900/50 text-stone-500 hover:text-stone-300 uppercase text-[9px] border border-stone-800 py-1">Zapisz</a>
+                                <button
+                                    onClick={() => downloadImage(r.url, `sanctuary_location_${r.id}.png`)}
+                                    className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase p-2 hover:bg-stone-800 border border-stone-800"
+                                >
+                                    Pobierz
+                                </button>
                                 <button onClick={() => setResults(prev => prev.filter(item => item.id !== r.id))} className="text-red-900 hover:text-red-700 uppercase text-[9px] px-2 border border-red-900/20">Usuń</button>
                             </div>
                         </div>
