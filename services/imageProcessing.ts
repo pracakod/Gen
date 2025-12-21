@@ -211,7 +211,87 @@ export const sliceSpriteSheet = async (imageUrl: string, rows: number, cols: num
                     canvas.height = fh;
                     const ctx = canvas.getContext('2d')!;
                     ctx.drawImage(img, x * fw, y * fh, fw, fh, 0, 0, fw, fh);
-                    frames.push(canvas.toDataURL());
+
+                    // Trimming: check if frame is not empty
+                    const data = ctx.getImageData(0, 0, fw, fh);
+                    let hasContent = false;
+                    for (let i = 3; i < data.data.length; i += 4) {
+                        if (data.data[i] > 10) { hasContent = true; break; }
+                    }
+                    if (hasContent) frames.push(canvas.toDataURL());
+                }
+            }
+            resolve(frames);
+        };
+        img.onerror = reject;
+    });
+};
+
+export const detectFrames = async (imageUrl: string): Promise<string[]> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = imageUrl;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(img, 0, 0);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const { width, height } = canvas;
+            const pixels = data.data;
+
+            // Simple clustering: find non-transparent islands
+            const visited = new Uint8Array(width * height);
+            const frames: string[] = [];
+
+            const isSolid = (x: number, y: number) => {
+                const idx = (y * width + x) * 4;
+                return pixels[idx + 3] > 20; // Alpha threshold
+            };
+
+            for (let y = 0; y < height; y += 4) { // Step for speed
+                for (let x = 0; x < width; x += 4) {
+                    const idx = y * width + x;
+                    if (!visited[idx] && isSolid(x, y)) {
+                        // Find bounding box using a quick scan
+                        let minX = x, maxX = x, minY = y, maxY = y;
+                        const stack = [[x, y]];
+                        visited[idx] = 1;
+
+                        while (stack.length > 0) {
+                            const [cx, cy] = stack.pop()!;
+                            if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+                            if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+
+                            // Check neighbors with larger step for island hopping
+                            const neighbors = [[cx + 8, cy], [cx - 8, cy], [cx, cy + 8], [cx, cy - 8]];
+                            for (const [nx, ny] of neighbors) {
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nIdx = ny * width + nx;
+                                    if (!visited[nIdx] && isSolid(nx, ny)) {
+                                        visited[nIdx] = 1;
+                                        stack.push([nx, ny]);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Pad bounding box
+                        minX = Math.max(0, minX - 10);
+                        minY = Math.max(0, minY - 10);
+                        maxX = Math.min(width - 1, maxX + 10);
+                        maxY = Math.min(height - 1, maxY + 10);
+
+                        if (maxX - minX > 20 && maxY - minY > 20) {
+                            const fCanvas = document.createElement('canvas');
+                            fCanvas.width = maxX - minX;
+                            fCanvas.height = maxY - minY;
+                            const fCtx = fCanvas.getContext('2d')!;
+                            fCtx.drawImage(img, minX, minY, fCanvas.width, fCanvas.height, 0, 0, fCanvas.width, fCanvas.height);
+                            frames.push(fCanvas.toDataURL());
+                        }
+                    }
                 }
             }
             resolve(frames);

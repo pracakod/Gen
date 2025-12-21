@@ -12,21 +12,21 @@ const HERO_TAGS = {
     class: ['Wojownik', 'Mag', 'Łucznik', 'Paladyn', 'Nekromanta', 'Druid'],
     trait: ['Płonący', 'Mroźny', 'Złoty', 'Skażony', 'Eteryczny'],
     render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt'],
-    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'Z Profilu']
+    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   },
   cyberpunk: {
     race: ['Człowiek', 'Cyborg', 'Android', 'Syntetyk', 'Haker'],
     class: ['Netrunner', 'Solo', 'Techie', 'Fixer', 'Mercenary'],
     trait: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny', 'Wirtualny'],
     render: ['In-Game Tool', 'Blender 3D', 'Cinematic', 'Voxel'],
-    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'Z Profilu']
+    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   },
   pixelart: {
     race: ['Człowiek', 'Elf', 'Krasnolud', 'Ork', 'Szkielet'],
     class: ['Rycerz', 'Czarodziej', 'Złodziej', 'Kapłan', 'Ranger'],
     trait: ['8-bitowy', 'Legendarny', 'Ognisty', 'Leśny', 'Przeklęty'],
     render: ['Sprite Sheet', 'Blender 3D', 'Retro Render', 'HD-2D'],
-    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'Z Profilu']
+    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   }
 };
 
@@ -120,7 +120,15 @@ export const AvatarGenerator: React.FC = () => {
     let poseDesc = "heroic standing pose";
     if (selectedTags.pose === 'Bojowa') poseDesc = "dynamic action battle pose, ready for combat";
     if (selectedTags.pose === 'A-Pose') poseDesc = "A-pose stance, arms slightly away from sides";
+    if (selectedTags.pose === 'T-Pose') poseDesc = "T-pose stance, arms strictly horizontal at sides";
     if (selectedTags.pose === 'Z Profilu') poseDesc = "side profile view, standing sideways";
+    if (selectedTags.pose === 'Z tyłu') poseDesc = "back view, facing away from camera";
+    if (selectedTags.pose === 'W biegu') poseDesc = "dynamic running pose, mid-stride";
+    if (selectedTags.pose === 'Atak mieczem') poseDesc = "dynamic sword swinging attack pose";
+    if (selectedTags.pose === 'Rzucanie czaru') poseDesc = "spellcasting pose, magic energy in hands";
+    if (selectedTags.pose === 'Siedząca') poseDesc = "sitting down pose";
+    if (selectedTags.pose === 'Kucająca') poseDesc = "crouching low pose";
+    if (selectedTags.pose === 'Medytacja') poseDesc = "meditating pose, floating slightly or sitting lotus";
     if (selectedTags.pose === 'Neutralna') poseDesc = "relaxed standing pose, arms at sides";
 
     if (prompt) parts.push(prompt);

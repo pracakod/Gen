@@ -3,7 +3,7 @@ import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
 import { useStyle } from '../contexts/StyleContext';
-import { removeBackground, sliceSpriteSheet, downloadImage } from '../services/imageProcessing';
+import { removeBackground, sliceSpriteSheet, downloadImage, detectFrames } from '../services/imageProcessing';
 
 // Kierunki
 const DIRECTIONS = [
@@ -254,14 +254,23 @@ export const SpriteGenerator: React.FC = () => {
         setResults(prev => prev.filter(r => r.id !== id));
     };
 
-    const handleSlice = async (result: SpriteResult) => {
+    const handleSlice = async (result: SpriteResult, mode: 'grid' | 'smart') => {
         try {
             setLoading(true);
-            const frames = await sliceSpriteSheet(result.url, 3, 3);
+            let frames: string[] = [];
+
+            if (mode === 'grid') {
+                frames = await sliceSpriteSheet(result.url, 3, 3);
+            } else {
+                // Smart mode: first remove background to get transparency, then detect islands
+                // (Assumes current background removal is already applied or we apply it temporarily)
+                frames = await detectFrames(result.url);
+            }
+
             setResults(prev => [
                 ...frames.map((f, i) => ({
                     id: `${result.id}_f${i}_${Date.now()}`,
-                    direction: `frame_${i + 1}`,
+                    direction: mode === 'smart' ? `smart_${i + 1}` : `frame_${i + 1}`,
                     url: f,
                     modelUsed: result.modelUsed
                 })),
@@ -620,12 +629,20 @@ export const SpriteGenerator: React.FC = () => {
                                     <img src={r.url} alt={r.direction} className={`w-full h-full object-contain transition-opacity ${r.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
 
                                     {r.direction === 'sheet' && !r.isRemovingBg && (
-                                        <button
-                                            onClick={() => handleSlice(r)}
-                                            className="absolute inset-0 bg-amber-900/80 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity uppercase font-bold"
-                                        >
-                                            Tnij 3x3
-                                        </button>
+                                        <div className="absolute inset-0 bg-stone-900/90 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity p-2">
+                                            <button
+                                                onClick={() => handleSlice(r, 'grid')}
+                                                className="w-full bg-amber-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-amber-800"
+                                            >
+                                                Siatka 3x3
+                                            </button>
+                                            <button
+                                                onClick={() => handleSlice(r, 'smart')}
+                                                className="w-full bg-blue-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-blue-800"
+                                            >
+                                                Inteligentne
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                                 <div className="flex flex-col gap-1 px-1 pb-1">
