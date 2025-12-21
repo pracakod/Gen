@@ -19,6 +19,7 @@ export const MountGenerator: React.FC = () => {
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoRemoveBg, setAutoRemoveBg] = useState(false);
+    const [model, setModel] = useState('free-pollinations');
 
     // Load/Save
     const [results, setResults] = useState<Result[]>(() => {
@@ -102,7 +103,7 @@ export const MountGenerator: React.FC = () => {
         setLoading(true);
         const full = getFullPrompt();
         try {
-            const { url, modelUsed } = await generateAvatar(full);
+            const { url, modelUsed } = await generateAvatar(full, model);
             let finalUrl = url;
             if (autoRemoveBg) {
                 try { finalUrl = await processRemoveBg(url); } catch (e) { }
@@ -120,6 +121,10 @@ export const MountGenerator: React.FC = () => {
                         <input type="checkbox" id="autoTransparentMount" checked={autoRemoveBg} onChange={e => setAutoRemoveBg(e.target.checked)} className="accent-emerald-600" />
                         <label htmlFor="autoTransparentMount" className="text-emerald-500 text-[9px] uppercase font-serif cursor-pointer hover:text-emerald-400">Przezroczyste Tło</label>
                     </div>
+                    <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
+                        <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
+                        <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
+                    </select>
                 </div>
                 <input
                     type="text"
