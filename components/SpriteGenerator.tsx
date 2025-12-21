@@ -128,9 +128,8 @@ export const SpriteGenerator: React.FC = () => {
         );
     };
 
-    // Buduj prompt z tagów i własnego tekstu
-    const buildPrompt = (directionAngle: string) => {
-        const tags = getCurrentTags();
+    // Buduj bazową część promptu (bez kierunku)
+    const getBasePrompt = () => {
         const parts: string[] = [];
 
         // Jeśli jest własny prompt, użyj go jako bazy
@@ -153,7 +152,13 @@ export const SpriteGenerator: React.FC = () => {
                 ? '16-bit pixel art sprite, retro game style, top-down view'
                 : '2D game sprite, dark fantasy style, top-down RPG';
 
-        return `${stylePrefix}, ${baseDesc}, ${directionAngle}, full body, centered, single character, ${styleConfig.artStyle}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
+        return `${stylePrefix}, ${baseDesc}`;
+    };
+
+    // Buduj pełny prompt dla konkretnego kierunku
+    const buildPrompt = (directionAngle: string) => {
+        const base = getBasePrompt();
+        return `${base}, ${directionAngle}, full body, centered, single character, ${styleConfig.artStyle}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
     // Generuj dla wybranych kierunków
@@ -345,45 +350,60 @@ export const SpriteGenerator: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Wybór kierunków */}
-                <div className="mb-6">
-                    <label className="text-stone-500 text-[9px] uppercase mb-2 block">Kierunki (kliknij aby wybrać)</label>
-                    <div className="grid grid-cols-8 gap-1 max-w-md mx-auto">
-                        {DIRECTIONS.map(dir => (
-                            <button
-                                key={dir.id}
-                                onClick={() => toggleDirection(dir.id)}
-                                className={`p-2 text-[12px] border transition-all ${selectedDirections.includes(dir.id)
-                                    ? 'bg-amber-900/50 border-amber-600 text-amber-300'
-                                    : 'bg-black border-stone-700 text-stone-500 hover:border-stone-500'
-                                    }`}
-                                title={dir.angle}
-                            >
-                                {dir.label}
-                            </button>
-                        ))}
+                {/* Wybór kierunków i Główny Prompt */}
+                <div className="flex flex-col lg:flex-row gap-6 mb-6">
+                    <div className="flex-1">
+                        <label className="text-stone-500 text-[9px] uppercase mb-2 block">Kierunki (kliknij aby wybrać)</label>
+                        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-4 gap-1">
+                            {DIRECTIONS.map(dir => (
+                                <button
+                                    key={dir.id}
+                                    onClick={() => toggleDirection(dir.id)}
+                                    className={`p-2 text-[12px] border transition-all ${selectedDirections.includes(dir.id)
+                                        ? 'bg-amber-900/50 border-amber-600 text-amber-300'
+                                        : 'bg-black border-stone-700 text-stone-500 hover:border-stone-500'
+                                        }`}
+                                    title={dir.angle}
+                                >
+                                    {dir.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-stone-600 text-[8px] text-center mt-2">
+                            Wybrano: {selectedDirections.length} kierunków
+                        </p>
                     </div>
-                    <p className="text-stone-600 text-[8px] text-center mt-2">
-                        Wybrano: {selectedDirections.length} kierunków
-                    </p>
+
+                    <div className="flex-1 bg-black/40 border border-stone-800 p-3">
+                        <label className="text-amber-700 text-[9px] uppercase mb-2 block">Główny Prompt (Wspólny)</label>
+                        <div className="text-[10px] text-stone-400 font-serif leading-tight italic">
+                            {getBasePrompt()}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-stone-800/50">
+                            <p className="text-[8px] text-stone-600 uppercase">Dodatki techniczne:</p>
+                            <p className="text-[8px] text-stone-700 font-mono">
+                                + [Kierunek], full body, centered, {styleConfig.artStyle}, neon green bg...
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Podgląd prompta - dla pierwszego wybranego kierunku */}
+                {/* Skrócony podgląd kierunkowy */}
                 {selectedDirections.length > 0 && (
-                    <div className="mb-4 space-y-2">
-                        {selectedDirections.slice(0, 3).map(dirId => {
+                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {selectedDirections.slice(0, 4).map(dirId => {
                             const dir = DIRECTIONS.find(d => d.id === dirId);
                             return dir ? (
-                                <PromptDisplay
-                                    key={dirId}
-                                    label={`Prompt dla ${dir.label}`}
-                                    text={buildPrompt(dir.angle)}
-                                    colorClass="text-amber-900"
-                                />
+                                <div key={dirId} className="bg-stone-950 p-2 border border-stone-900 flex justify-between items-center">
+                                    <span className="text-amber-600 text-[10px] font-diablo">{dir.label}</span>
+                                    <span className="text-stone-600 text-[8px] truncate ml-4 italic">{dir.angle}</span>
+                                </div>
                             ) : null;
                         })}
-                        {selectedDirections.length > 3 && (
-                            <p className="text-stone-600 text-[8px] text-center">...i {selectedDirections.length - 3} więcej</p>
+                        {selectedDirections.length > 4 && (
+                            <div className="sm:col-span-2 text-stone-600 text-[8px] text-center">
+                                ...i {selectedDirections.length - 4} więcej kierunków
+                            </div>
                         )}
                     </div>
                 )}
