@@ -11,19 +11,22 @@ const HERO_TAGS = {
     race: ['Człowiek', 'Nieumarły', 'Demon', 'Anioł', 'Upadły'],
     class: ['Wojownik', 'Mag', 'Łucznik', 'Paladyn', 'Nekromanta', 'Druid'],
     trait: ['Płonący', 'Mroźny', 'Złoty', 'Skażony', 'Eteryczny'],
-    render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt']
+    render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt'],
+    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'Z Profilu']
   },
   cyberpunk: {
     race: ['Człowiek', 'Cyborg', 'Android', 'Syntetyk', 'Haker'],
     class: ['Netrunner', 'Solo', 'Techie', 'Fixer', 'Mercenary'],
     trait: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny', 'Wirtualny'],
-    render: ['In-Game Tool', 'Blender 3D', 'Cinematic', 'Voxel']
+    render: ['In-Game Tool', 'Blender 3D', 'Cinematic', 'Voxel'],
+    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'Z Profilu']
   },
   pixelart: {
     race: ['Człowiek', 'Elf', 'Krasnolud', 'Ork', 'Szkielet'],
     class: ['Rycerz', 'Czarodziej', 'Złodziej', 'Kapłan', 'Ranger'],
     trait: ['8-bitowy', 'Legendarny', 'Ognisty', 'Leśny', 'Przeklęty'],
-    render: ['Sprite Sheet', 'Blender 3D', 'Retro Render', 'HD-2D']
+    render: ['Sprite Sheet', 'Blender 3D', 'Retro Render', 'HD-2D'],
+    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'Z Profilu']
   }
 };
 
@@ -109,16 +112,22 @@ export const AvatarGenerator: React.FC = () => {
 
     let renderStyle = styleConfig.artStyle;
     if (selectedTags.render === 'Blender 3D') {
-      renderStyle = "3D character model rendered in Blender, Octane Render, Cycles engine, high poly, highly detailed PBR textures, game character preview, professional studio lighting, A-pose stance, clear silhouette";
+      renderStyle = "3D character model rendered in Blender, Octane Render, Cycles engine, high poly, highly detailed PBR textures, game character preview, professional studio lighting, clear silhouette";
     } else if (selectedTags.render) {
       parts.push(selectedTags.render);
     }
+
+    let poseDesc = "heroic standing pose";
+    if (selectedTags.pose === 'Bojowa') poseDesc = "dynamic action battle pose, ready for combat";
+    if (selectedTags.pose === 'A-Pose') poseDesc = "A-pose stance, arms slightly away from sides";
+    if (selectedTags.pose === 'Z Profilu') poseDesc = "side profile view, standing sideways";
+    if (selectedTags.pose === 'Neutralna') poseDesc = "relaxed standing pose, arms at sides";
 
     if (prompt) parts.push(prompt);
 
     const baseText = parts.length > 0 ? parts.join(', ') : '[opis]';
     const enhancedUserText = enhanceUserPrompt(baseText, 'character');
-    const fitInFrame = "full body shot, entire character must be fully visible and contained within the frame, not cut off, head and feet must be visible, centered composition";
+    const fitInFrame = `full body shot, ${poseDesc}, entire character must be fully visible and contained within the frame, not cut off, head and feet must be visible, centered composition`;
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
     if (autoRemoveBg) {
@@ -298,7 +307,7 @@ export const AvatarGenerator: React.FC = () => {
           {Object.entries(HERO_TAGS[currentStyle as keyof typeof HERO_TAGS]).map(([category, values]) => (
             <div key={category}>
               <label className="text-stone-500 text-[9px] uppercase mb-1 block">
-                {category === 'race' ? 'Rasa' : category === 'class' ? 'Klasa' : category === 'trait' ? 'Atrybut' : 'Styl Renderu'}
+                {category === 'race' ? 'Rasa' : category === 'class' ? 'Klasa' : category === 'trait' ? 'Atrybut' : category === 'pose' ? 'Poza' : 'Styl Renderu'}
               </label>
               <div className="flex flex-wrap gap-1">
                 {values.map(val => (
