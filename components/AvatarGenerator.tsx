@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { createToken, erodeImage, removeBackground } from '../services/imageProcessing';
-import { ART_STYLES, enhanceUserPrompt } from '../services/prompts';
+import { enhanceUserPrompt } from '../services/prompts';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
+import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
   id: string;
@@ -18,6 +19,7 @@ interface Result {
 }
 
 export const AvatarGenerator: React.FC = () => {
+  const { styleConfig } = useStyle();
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('free-pollinations');
   const [loading, setLoading] = useState(false);
@@ -43,16 +45,13 @@ export const AvatarGenerator: React.FC = () => {
   const [genFemale, setGenFemale] = useState(true);
 
   const getFullPromptForGender = (gender: 'Male' | 'Female') => {
-    // 1. Ulepszamy wpis użytkownika (np. "Barbarzyńca" -> "muskularny wojownik z Arreat...")
     const enhancedUserText = enhanceUserPrompt(prompt || '[opis]', 'character');
 
     if (autoRemoveBg) {
-      // Dla wersji bez tła: skupiamy się na postaci, tło białe
-      return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${ART_STYLES.DARK_FANTASY}, ${ART_STYLES.LIGHTING}, on pure white background, isolated on white, cut out, NO TEXT, ${ART_STYLES.NEGATIVE}`;
+      return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, NO TEXT, ${styleConfig.negative}`;
     }
 
-    // Dla wersji z tłem: pełny klimat
-    return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${ART_STYLES.DARK_FANTASY}, ${ART_STYLES.LIGHTING}, ${ART_STYLES.ENVIRONMENT}, on solid pure neon green background #00FF00, flat lighting on background, NO TEXT, NO GREEN CLOTHING`;
+    return `${enhancedUserText}, gender ${gender}, full body character, looking at camera, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, on solid pure neon green background #00FF00, flat lighting on background, NO TEXT, NO GREEN CLOTHING`;
   };
 
   const processRemoveBg = async (imageUrl: string): Promise<string> => {

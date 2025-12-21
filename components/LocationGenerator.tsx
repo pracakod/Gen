@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-
 import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
     id: string;
@@ -15,6 +15,7 @@ interface Result {
 }
 
 export const LocationGenerator: React.FC = () => {
+    const { styleConfig, currentStyle } = useStyle();
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoRemoveBg, setAutoRemoveBg] = useState(false);
@@ -25,12 +26,10 @@ export const LocationGenerator: React.FC = () => {
         if (!saved) return [];
         try {
             const parsed = JSON.parse(saved);
-            // Handle legacy single object storage or string
             if (!Array.isArray(parsed)) {
                 if (typeof parsed === 'string') return [{ id: Math.random().toString(), url: parsed, modelUsed: 'Moc Pustki (Free)' }];
                 return [{ ...parsed, id: parsed.id || Math.random().toString(), modelUsed: parsed.modelUsed || 'Moc Pustki (Free)' }];
             }
-            // Check if items have IDs
             return parsed.map((item: any) => ({
                 ...item,
                 id: item.id || Math.random().toString(),
@@ -44,11 +43,17 @@ export const LocationGenerator: React.FC = () => {
         localStorage.setItem('sanctuary_location_result', JSON.stringify(results));
     }, [results]);
 
+    const getLocationPrefix = () => {
+        if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 environment, Night City location, neon-lit urban';
+        if (currentStyle === 'pixelart') return '16-bit pixel art game environment, retro RPG location';
+        return 'Diablo 4 environment';
+    };
+
     const getFullPrompt = () => {
         if (autoRemoveBg) {
-            return `Diablo 4 environment, ${prompt || '[opis]'}, dark fantasy, isometric view available, gloomy atmosphere, masterpiece, best quality, ultra detailed, 8k, on pure white background, isolated on white, cut out, empty background, NO TEXT`;
+            return `${getLocationPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `Diablo 4 environment, ${prompt || '[opis]'}, dark fantasy, isometric view available, gloomy atmosphere, masterpiece, best quality, ultra detailed, 8k, NO TEXT`;
+        return `${getLocationPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${styleConfig.environment}, NO TEXT, ${styleConfig.negative}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {

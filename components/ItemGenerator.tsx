@@ -3,6 +3,7 @@ import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
 import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { useStyle } from '../contexts/StyleContext';
 
 // ...
 
@@ -18,6 +19,7 @@ interface Result {
 
 
 export const ItemGenerator: React.FC = () => {
+  const { styleConfig, currentStyle } = useStyle();
   const [prompt, setPrompt] = useState('');
   const [itemType, setItemType] = useState('Weapon');
   const [loading, setLoading] = useState(false);
@@ -37,11 +39,17 @@ export const ItemGenerator: React.FC = () => {
     localStorage.setItem('sanctuary_items', JSON.stringify(results));
   }, [results]);
 
+  const getItemPrefix = () => {
+    if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 item, futuristic';
+    if (currentStyle === 'pixelart') return '16-bit pixel art game item, retro';
+    return 'Diablo 4 item';
+  };
+
   const getFullPrompt = () => {
     if (autoRemoveBg) {
-      return `Diablo 4 item, ${itemType}, ${prompt || '[opis]'}, dark fantasy, realistic, detailed, masterpiece, best quality, ultra detailed, 8k, on pure white background, isolated on white, cut out, empty background, NO TEXT`;
+      return `${getItemPrefix()}, ${itemType}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
     }
-    return `Diablo 4 item, ${itemType}, ${prompt || '[opis]'}, dark fantasy, realistic, detailed, masterpiece, best quality, ultra detailed, 8k, on solid pure neon green background #00FF00, NO TEXT`;
+    return `${getItemPrefix()}, ${itemType}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
   };
 
   const processRemoveBg = async (imageUrl: string) => {

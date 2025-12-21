@@ -3,6 +3,7 @@ import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
 import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { useStyle } from '../contexts/StyleContext';
 
 
 interface Result {
@@ -15,6 +16,7 @@ interface Result {
 }
 
 export const MonsterGenerator: React.FC = () => {
+    const { styleConfig, currentStyle } = useStyle();
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoRemoveBg, setAutoRemoveBg] = useState(false);
@@ -31,11 +33,17 @@ export const MonsterGenerator: React.FC = () => {
         localStorage.setItem('sanctuary_monsters', JSON.stringify(results));
     }, [results]);
 
+    const getMonsterPrefix = () => {
+        if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 enemy, cyborg creature, malfunctioning android, mutant';
+        if (currentStyle === 'pixelart') return '16-bit pixel art enemy sprite, retro game boss';
+        return 'Horrific Diablo 4 monster';
+    };
+
     const getFullPrompt = () => {
         if (autoRemoveBg) {
-            return `Horrific Diablo 4 monster, ${prompt || '[opis]'}, dark fantasy, detailed, scary, masterpiece, best quality, ultra detailed, 8k, on pure white background, isolated on white, cut out, empty background, NO TEXT`;
+            return `${getMonsterPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `Horrific Diablo 4 monster, ${prompt || '[opis]'}, dark fantasy, detailed, scary, masterpiece, best quality, ultra detailed, 8k, on solid pure neon green background #00FF00, NO TEXT`;
+        return `${getMonsterPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {

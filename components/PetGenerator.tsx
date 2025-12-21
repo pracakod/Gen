@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-
 import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
+import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
     id: string;
@@ -15,6 +15,7 @@ interface Result {
 }
 
 export const PetGenerator: React.FC = () => {
+    const { styleConfig, currentStyle } = useStyle();
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoRemoveBg, setAutoRemoveBg] = useState(false);
@@ -24,7 +25,6 @@ export const PetGenerator: React.FC = () => {
         const saved = localStorage.getItem('sanctuary_pets');
         if (!saved) return [];
         try {
-            // Legacy check
             const parsed = JSON.parse(saved);
             if (parsed.length > 0 && typeof parsed[0] === 'string') {
                 return parsed.map((url: string) => ({ id: Math.random().toString(), url, modelUsed: 'Moc Pustki (Free)' }));
@@ -38,11 +38,17 @@ export const PetGenerator: React.FC = () => {
     });
     React.useEffect(() => { localStorage.setItem('sanctuary_pets', JSON.stringify(results)); }, [results]);
 
+    const getPetPrefix = () => {
+        if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 companion drone, small robot pet';
+        if (currentStyle === 'pixelart') return '16-bit pixel art companion sprite, retro game pet';
+        return 'Small companion pet for Diablo 4 character';
+    };
+
     const getFullPrompt = () => {
         if (autoRemoveBg) {
-            return `Small companion pet for Diablo 4 character, ${prompt || '[opis]'}, dark fantasy, cute but scary, masterpiece, best quality, ultra detailed, 8k, on pure white background, isolated on white, cut out, empty background, NO TEXT`;
+            return `${getPetPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `Small companion pet for Diablo 4 character, ${prompt || '[opis]'}, dark fantasy, cute but scary, masterpiece, best quality, ultra detailed, 8k, on solid pure neon green background #00FF00, NO TEXT`;
+        return `${getPetPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {

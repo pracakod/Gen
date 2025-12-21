@@ -3,16 +3,8 @@ import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
-
 import { removeBackground, erodeImage, createToken } from '../services/imageProcessing';
-
-// ...
-
-
-
-// ...
-
-
+import { useStyle } from '../contexts/StyleContext';
 
 interface Result {
     id: string;
@@ -23,6 +15,7 @@ interface Result {
 }
 
 export const MountGenerator: React.FC = () => {
+    const { styleConfig, currentStyle } = useStyle();
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [autoRemoveBg, setAutoRemoveBg] = useState(false);
@@ -33,12 +26,9 @@ export const MountGenerator: React.FC = () => {
         if (!saved) return [];
         try {
             const parsed = JSON.parse(saved);
-            // Legacy migration
             if (parsed.length > 0 && typeof parsed[0] === 'string') {
-                // Very old format
                 return parsed.map((url: string) => ({ id: Math.random().toString(), url, modelUsed: 'Moc Pustki (Free)' }));
             }
-            // Check if items have IDs (previous version might not have saved IDs for mounts)
             return parsed.map((item: any) => ({
                 ...item,
                 id: item.id || Math.random().toString(),
@@ -49,11 +39,17 @@ export const MountGenerator: React.FC = () => {
 
     React.useEffect(() => { localStorage.setItem('sanctuary_mounts', JSON.stringify(results)); }, [results]);
 
+    const getMountPrefix = () => {
+        if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 vehicle, futuristic motorcycle or hover car';
+        if (currentStyle === 'pixelart') return '16-bit pixel art mount sprite, retro game vehicle or creature';
+        return 'Diablo 4 mount';
+    };
+
     const getFullPrompt = () => {
         if (autoRemoveBg) {
-            return `Diablo 4 mount, ${prompt || '[opis]'}, horse or beast, dark fantasy, saddle and armor, side view, masterpiece, best quality, ultra detailed, 8k, on pure white background, isolated on white, cut out, empty background, NO TEXT`;
+            return `${getMountPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, on pure white background, isolated on white, cut out, empty background, NO TEXT, ${styleConfig.negative}`;
         }
-        return `Diablo 4 mount, ${prompt || '[opis]'}, horse or beast, dark fantasy, saddle and armor, side view, masterpiece, best quality, ultra detailed, 8k, on solid pure neon green background #00FF00, NO TEXT`;
+        return `${getMountPrefix()}, ${prompt || '[opis]'}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, on solid pure neon green background #00FF00, NO TEXT, ${styleConfig.negative}`;
     };
 
     const processRemoveBg = async (imageUrl: string) => {
