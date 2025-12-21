@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
+import { useStyle } from './contexts/StyleContext';
+import { StyleSelector } from './components/StyleSelector';
 import { AvatarGenerator } from './components/AvatarGenerator';
 import { ItemGenerator } from './components/ItemGenerator';
-
 import { LocationGenerator } from './components/LocationGenerator';
 import { MonsterGenerator } from './components/MonsterGenerator';
 import { LoreGenerator } from './components/LoreGenerator';
@@ -16,34 +17,59 @@ type Tab = 'characters' | 'items' | 'monsters' | 'mounts' | 'pets' | 'locations'
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('characters');
+  const { styleConfig, currentStyle } = useStyle();
 
   const getHeaderTitle = () => {
     switch (activeTab) {
-      case 'characters': return 'Przyzwij Nowego Bohatera';
-      case 'items': return 'Wykuj Legendarny Przedmiot';
-      case 'monsters': return 'Otwórz Wrota Piekieł';
-      case 'mounts': return 'Stajnie Sanktuarium';
-      case 'pets': return 'Mroczni Towarzysze';
-      case 'locations': return 'Architektura Grozy';
-      case 'lore': return 'Kroniki Sanktuarium';
+      case 'characters': return currentStyle === 'cyberpunk' ? 'Stwórz Soloistę' : currentStyle === 'pixelart' ? 'Stwórz Bohatera' : 'Przyzwij Nowego Bohatera';
+      case 'items': return currentStyle === 'cyberpunk' ? 'Chrome & Hardware' : currentStyle === 'pixelart' ? 'Wykuj Przedmiot' : 'Wykuj Legendarny Przedmiot';
+      case 'monsters': return currentStyle === 'cyberpunk' ? 'Cyberpsychozy' : currentStyle === 'pixelart' ? 'Bestie' : 'Otwórz Wrota Piekieł';
+      case 'mounts': return currentStyle === 'cyberpunk' ? 'Pojazdy' : currentStyle === 'pixelart' ? 'Wierzchowce' : 'Stajnie Sanktuarium';
+      case 'pets': return currentStyle === 'cyberpunk' ? 'Drony & Boty' : currentStyle === 'pixelart' ? 'Towarzysze' : 'Mroczni Towarzysze';
+      case 'locations': return currentStyle === 'cyberpunk' ? 'Night City Dzielnice' : currentStyle === 'pixelart' ? 'Mapy' : 'Architektura Grozy';
+      case 'lore': return currentStyle === 'cyberpunk' ? 'Dane z Sieci' : currentStyle === 'pixelart' ? 'Legendy' : 'Kroniki Sanktuarium';
       case 'icon-maker': return 'Warsztat Ikon UI';
       case 'lab': return 'Laboratorium Hybrydowe';
-      case 'cleaner': return 'Oczyszczalnia Artefaktów';
+      case 'cleaner': return 'Oczyszczalnia';
     }
   };
 
   const getHeaderDesc = () => {
     switch (activeTab) {
-      case 'characters': return 'Opisz swojego czempiona. Kuźnia zmaterializuje go z pustki.';
-      case 'items': return 'Opisz broń, pancerz lub artefakt. Zostanie wykuty w zielonym blasku.';
-      case 'monsters': return 'Stwórz demony i bestie do Twojej armii ciemności.';
-      case 'mounts': return 'Przyzwij wierzchowca, który poniesie Cię przez krainy grozy.';
-      case 'pets': return 'Stwórz chowańca lub zwierzę, które będzie Ci towarzyszyć w boju.';
-      case 'locations': return 'Projektuj mroczne lochy i katedry jako tła do gry.';
-      case 'lore': return 'Generuj opisy, biografie i statystyki dla swoich znalezisk.';
-      case 'icon-maker': return 'Zmień zdjęcie w gotową ikonę z tłem i ramką.';
-      case 'lab': return 'Łącz artefakty na warstwach bez pomocy magii AI.';
-      case 'cleaner': return 'Usuń zieloną skazę tła z dowolnego artefaktu.';
+      case 'characters': return currentStyle === 'cyberpunk' ? 'Stwórz najemnika, netrunnera lub korpo-szczura.' : currentStyle === 'pixelart' ? 'Pikselowy bohater w stylu retro.' : 'Opisz swojego czempiona.';
+      case 'items': return currentStyle === 'cyberpunk' ? 'Cybernetyka, broń i sprzęt high-tech.' : currentStyle === 'pixelart' ? 'Miecze, zbroje i artefakty 16-bit.' : 'Broń, pancerz lub artefakt.';
+      case 'monsters': return currentStyle === 'cyberpunk' ? 'Cyberpsychole i zmutowane kreatury.' : currentStyle === 'pixelart' ? 'Pixelowe bosssy i wrogowie.' : 'Demony i bestie z otchłani.';
+      case 'mounts': return currentStyle === 'cyberpunk' ? 'Motory, samochody, AV.' : currentStyle === 'pixelart' ? 'Konie, smoki, statki.' : 'Wierzchowce grozy.';
+      case 'pets': return currentStyle === 'cyberpunk' ? 'Drony bojowe i towarzysze AI.' : currentStyle === 'pixelart' ? 'Pixel-art towarzysze.' : 'Chowańce i zwierzęta.';
+      case 'locations': return currentStyle === 'cyberpunk' ? 'Neonowe ulice i megabudynki.' : currentStyle === 'pixelart' ? 'Mapy i tła gry.' : 'Lochy i katedry.';
+      case 'lore': return currentStyle === 'cyberpunk' ? 'Historia z sieci i plotki.' : currentStyle === 'pixelart' ? 'Opisy w stylu retro.' : 'Opisy, biografie i statystyki.';
+      case 'icon-maker': return 'Zmień zdjęcie w ikonę.';
+      case 'lab': return 'Łącz elementy.';
+      case 'cleaner': return 'Usuń tło.';
+    }
+  };
+
+  const getGradientClass = () => {
+    switch (currentStyle) {
+      case 'cyberpunk': return 'from-purple-900 via-cyan-500 to-pink-500';
+      case 'pixelart': return 'from-slate-900 via-emerald-500 to-yellow-400';
+      default: return 'from-black via-red-900 to-black';
+    }
+  };
+
+  const getBgClass = () => {
+    switch (currentStyle) {
+      case 'cyberpunk': return 'bg-gray-950';
+      case 'pixelart': return 'bg-slate-950';
+      default: return 'bg-sanctuary-900 bg-diablo-pattern';
+    }
+  };
+
+  const getAccentColor = () => {
+    switch (currentStyle) {
+      case 'cyberpunk': return 'text-cyan-400';
+      case 'pixelart': return 'text-emerald-400';
+      default: return 'text-red-800';
     }
   };
 
@@ -56,30 +82,67 @@ const App: React.FC = () => {
     </button>
   );
 
+  const getNavColors = () => {
+    if (currentStyle === 'cyberpunk') {
+      return {
+        characters: 'bg-cyan-900/40 text-cyan-100',
+        items: 'bg-pink-900/40 text-pink-100',
+        monsters: 'bg-red-900/40 text-red-100',
+        locations: 'bg-purple-900/40 text-purple-100',
+        lore: 'bg-blue-900/40 text-blue-100',
+        mounts: 'bg-orange-900/40 text-orange-100',
+        pets: 'bg-green-900/40 text-green-100',
+      };
+    } else if (currentStyle === 'pixelart') {
+      return {
+        characters: 'bg-emerald-900/40 text-emerald-100',
+        items: 'bg-yellow-900/40 text-yellow-100',
+        monsters: 'bg-red-900/40 text-red-100',
+        locations: 'bg-blue-900/40 text-blue-100',
+        lore: 'bg-purple-900/40 text-purple-100',
+        mounts: 'bg-orange-900/40 text-orange-100',
+        pets: 'bg-teal-900/40 text-teal-100',
+      };
+    }
+    return {
+      characters: 'bg-red-900/40 text-red-100',
+      items: 'bg-amber-900/40 text-amber-100',
+      monsters: 'bg-purple-900/40 text-purple-100',
+      locations: 'bg-stone-800 text-stone-100',
+      lore: 'bg-yellow-900/40 text-yellow-100',
+      mounts: 'bg-orange-900/40 text-orange-100',
+      pets: 'bg-teal-900/40 text-teal-100',
+    };
+  };
+
+  const navColors = getNavColors();
+
   return (
-    <div className="min-h-screen w-full bg-sanctuary-900 bg-diablo-pattern text-stone-200 overflow-x-hidden">
-      <div className="h-1 w-full bg-gradient-to-r from-black via-red-900 to-black"></div>
+    <div className={`min-h-screen w-full ${getBgClass()} text-stone-200 overflow-x-hidden`}>
+      <div className={`h-1 w-full bg-gradient-to-r ${getGradientClass()}`}></div>
 
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
         <header className="text-center mb-8 md:mb-10 relative">
           <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-stone-800 to-transparent -z-10"></div>
           <h1 className="font-diablo text-4xl md:text-7xl text-stone-100 tracking-tighter blood-text mb-2">
-            Kuźnia <span className="text-red-800">Sanktuarium</span>
+            {styleConfig.headerTitle.split(' ')[0]} <span className={getAccentColor()}>{styleConfig.headerTitle.split(' ').slice(1).join(' ') || 'Forge'}</span>
           </h1>
-          <p className="font-serif text-amber-700/80 uppercase tracking-[0.2em] text-xs md:text-base">
-            Twórz. Walcz. Zwyciężaj.
+          <p className="font-serif text-amber-700/80 uppercase tracking-[0.2em] text-xs md:text-base mb-4">
+            {styleConfig.tagline}
           </p>
+
+          <StyleSelector />
         </header>
 
         <nav className="flex flex-wrap justify-center mb-8 gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {navButton('characters', 'Bohaterowie', 'bg-red-900/40 text-red-100')}
-          {navButton('items', 'Ekwipunek', 'bg-amber-900/40 text-amber-100')}
-          {navButton('monsters', 'Potwory', 'bg-purple-900/40 text-purple-100')}
-          {navButton('locations', 'Lokacje', 'bg-stone-800 text-stone-100')}
-          {navButton('lore', 'Kroniki', 'bg-yellow-900/40 text-yellow-100')}
-          {navButton('icon-maker', 'Warsztat Ikon', 'bg-amber-700/40 text-amber-100')}
-          {navButton('mounts', 'Wierzchowce', 'bg-orange-900/40 text-orange-100')}
-          {navButton('pets', 'Towarzysze', 'bg-teal-900/40 text-teal-100')}
+          {navButton('characters', currentStyle === 'cyberpunk' ? 'Soliści' : 'Bohaterowie', navColors.characters)}
+          {navButton('items', currentStyle === 'cyberpunk' ? 'Cyberware' : 'Ekwipunek', navColors.items)}
+          {navButton('monsters', currentStyle === 'cyberpunk' ? 'Wrogowie' : 'Potwory', navColors.monsters)}
+          {navButton('locations', currentStyle === 'cyberpunk' ? 'Dzielnice' : 'Lokacje', navColors.locations)}
+          {navButton('lore', currentStyle === 'cyberpunk' ? 'Dane' : 'Kroniki', navColors.lore)}
+          {navButton('icon-maker', 'Ikony', 'bg-amber-700/40 text-amber-100')}
+          {navButton('mounts', currentStyle === 'cyberpunk' ? 'Pojazdy' : 'Wierzchowce', navColors.mounts)}
+          {navButton('pets', currentStyle === 'cyberpunk' ? 'Drony' : 'Towarzysze', navColors.pets)}
           {navButton('cleaner', 'Oczyszczalnia', 'bg-blue-900/40 text-blue-100')}
           {navButton('lab', 'Laboratorium', 'bg-green-900/40 text-green-100')}
         </nav>
@@ -110,7 +173,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="text-center py-8 text-stone-700 text-[10px] font-serif border-t border-stone-900 mt-12 bg-black">
-        <p>Zasilane przez protokół Gemini 3 • Wyrocznia Sanktuarium</p>
+        <p>Zasilane przez protokół Gemini 3 • {styleConfig.headerTitle}</p>
       </footer>
     </div>
   );
