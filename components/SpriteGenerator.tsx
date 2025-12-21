@@ -62,6 +62,12 @@ export const SpriteGenerator: React.FC = () => {
         return saved ? JSON.parse(saved).tags ?? {} : {};
     });
 
+    // Własny prompt tekstowy
+    const [customPrompt, setCustomPrompt] = useState(() => {
+        const saved = localStorage.getItem(settingsKey);
+        return saved ? JSON.parse(saved).customPrompt ?? '' : '';
+    });
+
     // Kierunki do wygenerowania
     const [selectedDirections, setSelectedDirections] = useState<string[]>(['s']);
 
@@ -89,8 +95,8 @@ export const SpriteGenerator: React.FC = () => {
 
     // Zapisz ustawienia
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ tags: selectedTags, model }));
-    }, [selectedTags, model, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({ tags: selectedTags, model, customPrompt }));
+    }, [selectedTags, model, customPrompt, settingsKey]);
 
     // Zapisz wyniki
     React.useEffect(() => {
@@ -122,16 +128,22 @@ export const SpriteGenerator: React.FC = () => {
         );
     };
 
-    // Buduj prompt z tagów
+    // Buduj prompt z tagów i własnego tekstu
     const buildPrompt = (directionAngle: string) => {
         const tags = getCurrentTags();
         const parts: string[] = [];
 
-        if (selectedTags.race) parts.push(selectedTags.race);
-        if (selectedTags.class) parts.push(selectedTags.class);
-        if (selectedTags.armor && selectedTags.armor !== 'Brak') parts.push(`${selectedTags.armor} armor`);
-        if (selectedTags.weapon && selectedTags.weapon !== 'Brak') parts.push(`holding ${selectedTags.weapon}`);
-        if (selectedTags.color) parts.push(`${selectedTags.color} color scheme`);
+        // Jeśli jest własny prompt, użyj go jako bazy
+        if (customPrompt.trim()) {
+            parts.push(customPrompt.trim());
+        } else {
+            // W przeciwnym razie użyj tagów
+            if (selectedTags.race) parts.push(selectedTags.race);
+            if (selectedTags.class) parts.push(selectedTags.class);
+            if (selectedTags.armor && selectedTags.armor !== 'Brak') parts.push(`${selectedTags.armor} armor`);
+            if (selectedTags.weapon && selectedTags.weapon !== 'Brak') parts.push(`holding ${selectedTags.weapon}`);
+            if (selectedTags.color) parts.push(`${selectedTags.color} color scheme`);
+        }
 
         const baseDesc = parts.length > 0 ? parts.join(', ') : 'warrior character';
 
@@ -219,6 +231,20 @@ export const SpriteGenerator: React.FC = () => {
                         <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
                         <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
                     </select>
+                </div>
+
+                {/* Własny Prompt */}
+                <div className="mb-6">
+                    <label className="text-stone-500 text-[9px] uppercase mb-2 block">Własny Opis (opcjonalnie - zastępuje tagi)</label>
+                    <textarea
+                        value={customPrompt}
+                        onChange={(e) => setCustomPrompt(e.target.value)}
+                        placeholder={currentStyle === 'cyberpunk' ? 'np. Netrunner z czerwonymi implantami...' : currentStyle === 'pixelart' ? 'np. Rycerz z ognistym mieczem...' : 'np. Nekromanta w płonącej szacie...'}
+                        className="w-full bg-black border border-stone-800 p-3 text-stone-200 outline-none focus:border-amber-900 min-h-[60px] text-[11px]"
+                    />
+                    {customPrompt && (
+                        <p className="text-amber-600 text-[8px] mt-1">Używam własnego opisu (tagi zignorowane)</p>
+                    )}
                 </div>
 
                 {/* System Tagów */}
