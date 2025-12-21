@@ -99,7 +99,7 @@ export const PetGenerator: React.FC = () => {
         if (prompt) parts.push(prompt);
 
         const baseText = parts.join(', ');
-        const fitInFrame = "small creature, must be centered and fully visible within frame, not cut off, whole body visible";
+        const fitInFrame = "wide shot, small creature, centered, entire subject COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE AND BELOW, generous padding around the subject, zoomed out significantly to ensure nothing is cut off";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
 
         if (autoRemoveBg) {
@@ -247,14 +247,14 @@ export const PetGenerator: React.FC = () => {
 
                         <div className="flex gap-1 mt-1">
                             <button onClick={() => removeBg(res.id)} className="flex-1 text-center bg-black text-teal-700 text-[8px] uppercase py-1 border border-teal-900/20 hover:text-white">Wytnij</button>
-                            <button
+                            <DiabloButton
                                 onClick={() => makeToken(res.id)}
-                                disabled={res.isRemovingBg}
-                                className="bg-stone-900 text-amber-500 text-[8px] uppercase p-1 border border-stone-800 hover:text-amber-300 flex-1 transition-colors disabled:opacity-50"
+                                isLoading={res.isRemovingBg}
+                                className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
                                 title="Stwórz Token VTT"
                             >
                                 Token
-                            </button>
+                            </DiabloButton>
                             <button
                                 onClick={() => downloadImage(res.url, `sanctuary_pet_${res.id}.png`)}
                                 className="flex-1 text-center bg-stone-900 text-teal-700 text-[8px] uppercase py-1 border border-teal-900/20 hover:text-white"

@@ -100,6 +100,8 @@ export const SpriteGenerator: React.FC = () => {
     const [currentDirection, setCurrentDirection] = useState<string | null>(null);
     const [gridRows, setGridRows] = useState(3);
     const [gridCols, setGridCols] = useState(3);
+    const [animatingFrames, setAnimatingFrames] = useState<string[] | null>(null);
+    const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Pobierz tagi dla aktualnego stylu
@@ -256,6 +258,33 @@ export const SpriteGenerator: React.FC = () => {
         setResults(prev => prev.filter(r => r.id !== id));
     };
 
+    const handlePreviewAnimation = (result: SpriteResult) => {
+        // Find all frames that belong to this sheet or are results of a slice
+        // If it's a sheet, we might want to slice it first or preview from existing sliced frames
+        // Let's assume user wants to preview CURRENTLY visible results that are frames
+        const frames = results.filter(r => r.id.startsWith(result.id) && r.id !== result.id).map(r => r.url);
+        if (frames.length > 0) {
+            setAnimatingFrames(frames);
+            setCurrentFrameIndex(0);
+        } else {
+            // If no frames found, maybe it's a list of single sprites? 
+            // Preview all currently visible single sprites
+            const allSingles = results.filter(r => r.direction !== 'sheet').map(r => r.url).reverse();
+            if (allSingles.length > 0) {
+                setAnimatingFrames(allSingles);
+                setCurrentFrameIndex(0);
+            }
+        }
+    };
+
+    React.useEffect(() => {
+        if (!animatingFrames) return;
+        const interval = setInterval(() => {
+            setCurrentFrameIndex(prev => (prev + 1) % animatingFrames.length);
+        }, 120); // ~8 FPS
+        return () => clearInterval(interval);
+    }, [animatingFrames]);
+
     const handleSlice = async (result: SpriteResult, mode: 'grid' | 'smart') => {
         try {
             setLoading(true);
@@ -300,19 +329,22 @@ export const SpriteGenerator: React.FC = () => {
     };
 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const url = event.target?.result as string;
-            setResults(prev => [{
-                id: `upload_${Date.now()}`,
-                direction: 'sheet',
-                url: url,
-                modelUsed: 'Wgrany Plik'
-            }, ...prev]);
-        };
-        reader.readAsDataURL(file);
+        const files = e.target.files;
+        if (!files) return;
+
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const url = event.target?.result as string;
+                setResults(prev => [{
+                    id: `upload_${Date.now()}_${Math.random()}`,
+                    direction: file.name.replace(/\.[^/.]+$/, ""), // Name without extension
+                    url: url,
+                    modelUsed: 'Wgrany Plik'
+                }, ...prev]);
+            };
+            reader.readAsDataURL(file);
+        });
     };
 
     // Wyczyść wszystko
@@ -633,6 +665,7 @@ export const SpriteGenerator: React.FC = () => {
                             onChange={handleUpload}
                             className="hidden"
                             accept="image/*"
+                            multiple
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
@@ -667,6 +700,12 @@ export const SpriteGenerator: React.FC = () => {
                                                 className="w-full bg-blue-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-blue-800"
                                             >
                                                 Inteligentne
+                                            </button>
+                                            <button
+                                                onClick={() => handlePreviewAnimation(r)}
+                                                className="w-full bg-emerald-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-emerald-800"
+                                            >
+                                                ▶ Animuj
                                             </button>
                                         </div>
                                     )}
@@ -710,6 +749,36 @@ export const SpriteGenerator: React.FC = () => {
                                 </button>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+            {/* Modal Animacji */}
+            {animatingFrames && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
+                    <div className="bg-stone-900 border-2 border-amber-900/50 p-8 relative max-w-lg w-full flex flex-col items-center shadow-[0_0_50px_rgba(120,53,15,0.3)]">
+                        <button
+                            onClick={() => setAnimatingFrames(null)}
+                            className="absolute top-2 right-2 text-stone-500 hover:text-white text-2xl transition-colors"
+                        >
+                            ×
+                        </button>
+                        <h2 className="font-diablo text-amber-500 text-lg mb-6 uppercase tracking-widest">Podgląd Animacji</h2>
+                        <div className="aspect-square w-64 bg-black border border-stone-800 flex items-center justify-center overflow-hidden bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)] shadow-inner">
+                            <img
+                                src={animatingFrames[currentFrameIndex]}
+                                alt="Animacja"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <p className="mt-4 text-stone-500 text-[10px] uppercase tracking-widest font-serif">
+                            Klatka {currentFrameIndex + 1} z {animatingFrames.length}
+                        </p>
+                        <button
+                            onClick={() => setAnimatingFrames(null)}
+                            className="mt-8 px-8 py-2 bg-amber-900/40 text-amber-200 border border-amber-900/50 hover:bg-amber-900/60 transition-all uppercase text-[10px] tracking-widest font-bold"
+                        >
+                            Zamknij portal
+                        </button>
                     </div>
                 </div>
             )}

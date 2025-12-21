@@ -106,7 +106,7 @@ export const ItemGenerator: React.FC = () => {
     if (prompt) parts.push(prompt);
 
     const baseText = parts.join(', ');
-    const fitInFrame = "single item, object must be centered and fully visible in frame, not cut off, isolated, macro shot";
+    const fitInFrame = "single item, object COMPLETELY INSIDE the frame, centered, zoomed out slightly to ensure nothing is cut off, generous padding around the object";
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between object and background";
 
     if (autoRemoveBg) {
@@ -298,14 +298,14 @@ export const ItemGenerator: React.FC = () => {
 
               <div className="flex gap-1">
                 <button onClick={() => removeBg(res.id)} disabled={res.isRemovingBg} className="bg-stone-900 text-stone-500 text-[8px] uppercase p-2 border border-stone-800 hover:text-white flex-1 transition-colors disabled:opacity-50">Wytnij</button>
-                <button
+                <DiabloButton
                   onClick={() => makeToken(res.id)}
-                  disabled={res.isRemovingBg}
-                  className="bg-stone-900 text-amber-500 text-[8px] uppercase p-2 border border-stone-800 hover:text-amber-300 flex-1 transition-colors disabled:opacity-50"
+                  isLoading={res.isRemovingBg}
+                  className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
                   title="Stwórz Token VTT"
                 >
                   Token
-                </button>
+                </DiabloButton>
                 <button
                   onClick={() => downloadImage(res.url, `sanctuary_item_${res.id}.png`)}
                   className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase p-2 hover:bg-stone-800 border border-stone-800"

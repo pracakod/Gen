@@ -98,7 +98,7 @@ export const MountGenerator: React.FC = () => {
         if (prompt) parts.push(prompt);
 
         const baseText = parts.join(', ');
-        const fitInFrame = "full mount view, side profile view, must be fully visible within the frame, not cut off, head and tail visible, centered";
+        const fitInFrame = "wide shot, side view, centered, entire mount COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE HEAD AND BELOW FEET, generous padding around the subject, zoomed out significantly to ensure nothing is cut off";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
 
         if (autoRemoveBg) {
@@ -246,14 +246,14 @@ export const MountGenerator: React.FC = () => {
 
                         <div className="flex gap-1 mt-1">
                             <button onClick={() => removeBg(res.id)} className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase py-1 border border-stone-800 hover:text-white">Wytnij</button>
-                            <button
+                            <DiabloButton
                                 onClick={() => makeToken(res.id)}
-                                disabled={res.isRemovingBg}
-                                className="bg-stone-900 text-amber-500 text-[8px] uppercase p-1 border border-stone-800 hover:text-amber-300 flex-1 transition-colors disabled:opacity-50"
+                                isLoading={res.isRemovingBg}
+                                className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
                                 title="Stwórz Token VTT"
                             >
                                 Token
-                            </button>
+                            </DiabloButton>
                             <button
                                 onClick={() => downloadImage(res.url, `sanctuary_mount_${res.id}.png`)}
                                 className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase py-1 border border-stone-800 hover:text-white"

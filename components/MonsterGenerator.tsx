@@ -99,7 +99,7 @@ export const MonsterGenerator: React.FC = () => {
         if (prompt) parts.push(prompt);
 
         const baseText = parts.join(', ');
-        const fitInFrame = "full character view, must be fully visible within the frame, not cut off, head to feet visible, centered";
+        const fitInFrame = "wide full body shot, centered, entire subject COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE HEAD AND BELOW FEET, generous padding around the subject, zoomed out slightly to ensure nothing is cut off";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
 
         if (autoRemoveBg) {

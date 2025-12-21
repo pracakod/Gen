@@ -139,9 +139,9 @@ export const AvatarGenerator: React.FC = () => {
     const baseText = parts.length > 0 ? parts.join(', ') : '[opis]';
     const enhancedUserText = enhanceUserPrompt(baseText, 'character');
 
-    let fitInFrame = `full body shot, ${poseDesc}, entire character must be fully visible and contained within the frame, not cut off, head and feet must be visible, centered composition`;
+    let fitInFrame = `extremely wide full body shot, ${poseDesc}, entire character COMPLETELY INSIDE the frame with LOTS OF SPACE around it, CLEAR SPACE ABOVE THE HEAD AND BELOW THE FEET, generous padding of at least 15% from all image edges, zoomed out view, centered composition, ensure nothing is cut off`;
     if (selectedTags.pose === 'Portret' || selectedTags.pose === 'Popiersie') {
-      fitInFrame = `${poseDesc}, centered, framed properly, high detail`;
+      fitInFrame = `medium shot, ${poseDesc}, centered in middle of frame, CLEAR WHITE SPACE ABOVE HEAD, framed properly with protective padding at the top and sides, high detail, no cropping`;
     }
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
@@ -388,14 +388,14 @@ export const AvatarGenerator: React.FC = () => {
 
               <div className="flex gap-2 mt-1">
                 <button onClick={() => removeBg(res.id)} className="bg-stone-900 text-stone-500 text-[8px] uppercase p-1 border border-stone-800 hover:text-white flex-1 transition-colors">Wytnij Tło</button>
-                <button
+                <DiabloButton
                   onClick={() => makeToken(res.id)}
-                  disabled={res.isRemovingBg}
-                  className="bg-stone-900 text-amber-500 text-[8px] uppercase p-1 border border-stone-800 hover:text-amber-300 flex-1 transition-colors disabled:opacity-50"
+                  isLoading={res.isRemovingBg}
+                  className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
                   title="Stwórz Token VTT"
                 >
                   Token
-                </button>
+                </DiabloButton>
                 <button
                   onClick={() => downloadImage(res.url, `sanctuary_avatar_${res.id}.png`)}
                   className="bg-black text-stone-600 text-[8px] uppercase p-1 border border-stone-800 hover:text-white flex-1 text-center"
