@@ -22,6 +22,7 @@ export const ItemGenerator: React.FC = () => {
   const [itemType, setItemType] = useState('Weapon');
   const [loading, setLoading] = useState(false);
   const [autoRemoveBg, setAutoRemoveBg] = useState(false);
+  const [model, setModel] = useState('free-pollinations');
 
   // Load from local storage
   const [results, setResults] = useState<Result[]>(() => {
@@ -103,7 +104,7 @@ export const ItemGenerator: React.FC = () => {
     const fullPrompt = getFullPrompt();
 
     try {
-      const { url, modelUsed } = await generateAvatar(fullPrompt);
+      const { url, modelUsed } = await generateAvatar(fullPrompt, model);
       setResults(prev => [{
         id: Math.random().toString(36),
         url,
@@ -147,6 +148,10 @@ export const ItemGenerator: React.FC = () => {
               <option value="Amulet">Amulet</option>
               <option value="Ring">Pierścień</option>
               <option value="Artifact">Artefakt</option>
+            </select>
+            <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
+              <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
+              <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
             </select>
           </div>
         </div>

@@ -3,21 +3,26 @@ import { DiabloButton } from './DiabloButton';
 
 type RemoveMode = 'contiguous' | 'global';
 
-// Wartości domyślne
 const DEFAULTS = {
     tolerance: 30,
-    edgeSmooth: 0,
+    zoom: 1,
+    panX: 0,
+    panY: 0,
 };
 
 export const BackgroundRemover: React.FC = () => {
     const [image, setImage] = useState<string | null>(null);
     const [history, setHistory] = useState<string[]>([]);
     const [tolerance, setTolerance] = useState(DEFAULTS.tolerance);
-    const [edgeSmooth, setEdgeSmooth] = useState(DEFAULTS.edgeSmooth);
     const [mode, setMode] = useState<RemoveMode>('contiguous');
     const [loading, setLoading] = useState(false);
     const [replaceBg, setReplaceBg] = useState<string | null>(null);
     const [showGrid, setShowGrid] = useState(true);
+
+    // Zoom i przesuwanie podglądu
+    const [viewZoom, setViewZoom] = useState(DEFAULTS.zoom);
+    const [viewPanX, setViewPanX] = useState(DEFAULTS.panX);
+    const [viewPanY, setViewPanY] = useState(DEFAULTS.panY);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +52,9 @@ export const BackgroundRemover: React.FC = () => {
                 const res = ev.target?.result as string;
                 setImage(res);
                 setHistory([res]);
+                setViewZoom(DEFAULTS.zoom);
+                setViewPanX(DEFAULTS.panX);
+                setViewPanY(DEFAULTS.panY);
             };
             reader.readAsDataURL(file);
         }
@@ -151,11 +159,16 @@ export const BackgroundRemover: React.FC = () => {
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
-        const scaleX = canvasRef.current.width / rect.width;
-        const scaleY = canvasRef.current.height / rect.height;
-        const x = Math.floor((e.clientX - rect.left) * scaleX);
-        const y = Math.floor((e.clientY - rect.top) * scaleY);
-        removeColor(x, y);
+        const scaleX = canvasRef.current.width / (rect.width / viewZoom);
+        const scaleY = canvasRef.current.height / (rect.height / viewZoom);
+
+        // Poprawka na zoom i pan
+        const x = Math.floor(((e.clientX - rect.left) / viewZoom - viewPanX) * scaleX / viewZoom);
+        const y = Math.floor(((e.clientY - rect.top) / viewZoom - viewPanY) * scaleY / viewZoom);
+
+        if (x >= 0 && x < canvasRef.current.width && y >= 0 && y < canvasRef.current.height) {
+            removeColor(x, y);
+        }
     };
 
     const handleErode = (iterations: number = 1) => {
@@ -215,13 +228,10 @@ export const BackgroundRemover: React.FC = () => {
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
                     if (oldData[idx + 3] === 0) {
-                        // Sprawdź sąsiadów
                         let hasVisibleNeighbor = false;
                         let avgR = 0, avgG = 0, avgB = 0, count = 0;
 
-                        const neighbors = [
-                            [-1, 0], [1, 0], [0, -1], [0, 1]
-                        ];
+                        const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
                         for (const [dx, dy] of neighbors) {
                             const nx = x + dx;
@@ -255,38 +265,11 @@ export const BackgroundRemover: React.FC = () => {
         }, 10);
     };
 
-    const handleInvert = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
-        if (!canvas || !ctx) return;
-
-        setLoading(true);
-        setTimeout(() => {
-            const width = canvas.width;
-            const height = canvas.height;
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-
-            for (let i = 0; i < data.length; i += 4) {
-                if (data[i + 3] === 0) {
-                    data[i + 3] = 255;
-                } else {
-                    data[i + 3] = 0;
-                }
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-            const newState = canvas.toDataURL();
-            setHistory(prev => [...prev, newState]);
-            setLoading(false);
-        }, 10);
-    };
-
     const ResetButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
         <button
             onClick={onClick}
             className="ml-2 px-2 py-0.5 text-[8px] bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white rounded transition-colors"
-            title="Resetuj do domyślnej wartości"
+            title="Resetuj"
         >
             ⟲
         </button>
@@ -370,12 +353,50 @@ export const BackgroundRemover: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Zoom i przesuwanie */}
+                        <div className="grid grid-cols-3 gap-4 bg-black/50 p-3 border border-stone-800 rounded">
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-stone-400 text-[9px] uppercase">🔍 Zoom: {(viewZoom * 100).toFixed(0)}%</span>
+                                    <ResetButton onClick={() => setViewZoom(DEFAULTS.zoom)} />
+                                </div>
+                                <input
+                                    type="range" min="0.25" max="4" step="0.25"
+                                    value={viewZoom} onChange={e => setViewZoom(parseFloat(e.target.value))}
+                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-stone-400 text-[9px] uppercase">↔ Pozycja X: {viewPanX}px</span>
+                                    <ResetButton onClick={() => setViewPanX(DEFAULTS.panX)} />
+                                </div>
+                                <input
+                                    type="range" min="-500" max="500" step="10"
+                                    value={viewPanX} onChange={e => setViewPanX(parseInt(e.target.value))}
+                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-stone-400 text-[9px] uppercase">↕ Pozycja Y: {viewPanY}px</span>
+                                    <ResetButton onClick={() => setViewPanY(DEFAULTS.panY)} />
+                                </div>
+                                <input
+                                    type="range" min="-500" max="500" step="10"
+                                    value={viewPanY} onChange={e => setViewPanY(parseInt(e.target.value))}
+                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                        </div>
+
                         {/* Narzędzia krawędzi */}
                         <div className="flex flex-wrap gap-2 bg-black/50 p-3 border border-stone-800 rounded">
                             <span className="text-stone-500 text-[10px] uppercase w-full mb-2">Narzędzia krawędzi:</span>
                             <button
                                 onClick={() => handleErode(1)}
                                 disabled={loading}
+                                title="Usuwa 1 piksel z krawędzi widocznego obrazu (gdy usunąłeś za mało)"
                                 className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors disabled:opacity-50"
                             >
                                 ➖ Zmniejsz (1px)
@@ -383,6 +404,7 @@ export const BackgroundRemover: React.FC = () => {
                             <button
                                 onClick={() => handleErode(3)}
                                 disabled={loading}
+                                title="Usuwa 3 piksele z krawędzi (agresywniejsze)"
                                 className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors disabled:opacity-50"
                             >
                                 ➖ Zmniejsz (3px)
@@ -390,16 +412,10 @@ export const BackgroundRemover: React.FC = () => {
                             <button
                                 onClick={handleDilate}
                                 disabled={loading}
+                                title="Rozszerza widoczne piksele o 1px (gdy usunąłeś za dużo)"
                                 className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-cyan-500 hover:bg-cyan-900/20 transition-colors disabled:opacity-50"
                             >
                                 ➕ Powiększ (1px)
-                            </button>
-                            <button
-                                onClick={handleInvert}
-                                disabled={loading}
-                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-purple-500 hover:bg-purple-900/20 transition-colors disabled:opacity-50"
-                            >
-                                🔄 Odwróć maskę
                             </button>
                         </div>
 
@@ -412,13 +428,13 @@ export const BackgroundRemover: React.FC = () => {
                                     onChange={(e) => setShowGrid(e.target.checked)}
                                     className="accent-green-500"
                                 />
-                                Pokaż siatkę przezroczystości
+                                Siatka przezroczystości
                             </label>
                             <button
                                 onClick={() => bgInputRef.current?.click()}
                                 className="px-3 py-1 text-[10px] uppercase border border-stone-700 text-stone-400 hover:bg-stone-800"
                             >
-                                🖼 Zastąp tło obrazem
+                                🖼 Podłóż tło
                             </button>
                             <input
                                 type="file"
@@ -432,25 +448,30 @@ export const BackgroundRemover: React.FC = () => {
                                     onClick={() => setReplaceBg(null)}
                                     className="px-2 py-1 text-[10px] text-red-400 hover:text-red-300"
                                 >
-                                    ✕ Usuń tło
+                                    ✕ Usuń podłożone tło
                                 </button>
                             )}
                         </div>
 
                         {/* Canvas */}
                         <div
-                            className="relative border border-stone-700 overflow-hidden flex justify-center"
+                            className="relative border border-stone-700 overflow-hidden flex justify-center items-center"
                             style={{
                                 background: showGrid && !replaceBg
                                     ? 'repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 20px 20px'
                                     : replaceBg
                                         ? `url(${replaceBg}) center/cover`
-                                        : '#1a1a1a'
+                                        : '#1a1a1a',
+                                minHeight: '400px'
                             }}
                         >
                             <canvas
                                 ref={canvasRef}
                                 onClick={handleCanvasClick}
+                                style={{
+                                    transform: `scale(${viewZoom}) translate(${viewPanX}px, ${viewPanY}px)`,
+                                    transformOrigin: 'center center',
+                                }}
                                 className={`max-w-full max-h-[60vh] ${loading ? 'cursor-wait' : 'cursor-crosshair'}`}
                             />
                             {loading && (
