@@ -368,14 +368,25 @@ export const SpriteGenerator: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Podgląd prompta */}
-                <div className="mb-4">
-                    <PromptDisplay
-                        label="Przykładowy prompt (S)"
-                        text={buildPrompt(DIRECTIONS.find(d => d.id === 's')?.angle || '')}
-                        colorClass="text-amber-900"
-                    />
-                </div>
+                {/* Podgląd prompta - dla pierwszego wybranego kierunku */}
+                {selectedDirections.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                        {selectedDirections.slice(0, 3).map(dirId => {
+                            const dir = DIRECTIONS.find(d => d.id === dirId);
+                            return dir ? (
+                                <PromptDisplay
+                                    key={dirId}
+                                    label={`Prompt dla ${dir.label}`}
+                                    text={buildPrompt(dir.angle)}
+                                    colorClass="text-amber-900"
+                                />
+                            ) : null;
+                        })}
+                        {selectedDirections.length > 3 && (
+                            <p className="text-stone-600 text-[8px] text-center">...i {selectedDirections.length - 3} więcej</p>
+                        )}
+                    </div>
+                )}
 
                 {/* Przycisk generowania */}
                 <DiabloButton
