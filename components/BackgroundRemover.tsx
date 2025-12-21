@@ -1,0 +1,301 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { DiabloButton } from './DiabloButton';
+
+type RemoveMode = 'contiguous' | 'global';
+
+export const BackgroundRemover: React.FC = () => {
+    const [image, setImage] = useState<string | null>(null);
+    const [history, setHistory] = useState<string[]>([]);
+    const [tolerance, setTolerance] = useState(30);
+    const [mode, setMode] = useState<RemoveMode>('contiguous');
+    const [loading, setLoading] = useState(false);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Initial load
+    useEffect(() => {
+        if (image && canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) {
+                const img = new Image();
+                img.onload = () => {
+                    canvasRef.current!.width = img.width;
+                    canvasRef.current!.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    if (history.length === 0) setHistory([image]);
+                };
+                img.src = image;
+            }
+        }
+    }, [image]);
+
+    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const res = ev.target?.result as string;
+                setImage(res);
+                setHistory([res]);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleUndo = () => {
+        if (history.length > 1) {
+            const newHistory = [...history];
+            newHistory.pop();
+            const prev = newHistory[newHistory.length - 1];
+            setHistory(newHistory);
+
+            const img = new Image();
+            img.onload = () => {
+                const ctx = canvasRef.current?.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+                    ctx.drawImage(img, 0, 0);
+                }
+            };
+            img.src = prev;
+        }
+    };
+
+    const getColorDistance = (data: Uint8ClampedArray, idx: number, tr: number, tg: number, tb: number) => {
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        return Math.sqrt((r - tr) ** 2 + (g - tg) ** 2 + (b - tb) ** 2);
+    };
+
+    const removeColor = (startX: number, startY: number) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        setLoading(true);
+
+        // Allow UI to update before heavy processing
+        setTimeout(() => {
+            const width = canvas.width;
+            const height = canvas.height;
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            // Target color
+            const targetIndex = (startY * width + startX) * 4;
+            const tr = data[targetIndex];
+            const tg = data[targetIndex + 1];
+            const tb = data[targetIndex + 2];
+
+            const threshold = tolerance * 2.5;
+
+            if (mode === 'global') {
+                // Global Replacement
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] === 0) continue; // Already transparent
+                    if (getColorDistance(data, i, tr, tg, tb) < threshold) {
+                        data[i + 3] = 0;
+                    }
+                }
+            } else {
+                // Flood Fill (BFS)
+                const queue: [number, number][] = [[startX, startY]];
+                const visited = new Uint8Array(width * height); // 0=unvisited, 1=visited
+
+                // Helper for index
+                const getIdx = (x: number, y: number) => (y * width + x) * 4;
+                const getVisIdx = (x: number, y: number) => y * width + x;
+
+                while (queue.length > 0) {
+                    const [cx, cy] = queue.shift()!;
+                    const idx = getIdx(cx, cy);
+
+                    // If transparent or visited, skip (check visited first!)
+                    if (visited[getVisIdx(cx, cy)]) continue;
+                    visited[getVisIdx(cx, cy)] = 1;
+
+                    // Check color match
+                    if (data[idx + 3] !== 0 && getColorDistance(data, idx, tr, tg, tb) < threshold) {
+                        data[idx + 3] = 0; // Make transparent
+
+                        // Add neighbors
+                        if (cx > 0) queue.push([cx - 1, cy]);
+                        if (cx < width - 1) queue.push([cx + 1, cy]);
+                        if (cy > 0) queue.push([cx, cy - 1]);
+                        if (cy < height - 1) queue.push([cx, cy + 1]);
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            const newState = canvas.toDataURL();
+            setHistory(prev => [...prev, newState]);
+            setLoading(false);
+        }, 10);
+    };
+
+    const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = canvasRef.current.width / rect.width;
+        const scaleY = canvasRef.current.height / rect.height;
+        const x = Math.floor((e.clientX - rect.left) * scaleX);
+        const y = Math.floor((e.clientY - rect.top) * scaleY);
+        removeColor(x, y);
+    };
+
+    const handleErode = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        setLoading(true);
+        setTimeout(() => {
+            const width = canvas.width;
+            const height = canvas.height;
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data; // reference
+            const oldData = new Uint8ClampedArray(data); // copy
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    if (oldData[idx + 3] > 0) { // If pixel is visible
+                        // Check neighbors
+                        let isEdge = false;
+                        if (x > 0 && oldData[idx - 4 + 3] === 0) isEdge = true;
+                        else if (x < width - 1 && oldData[idx + 4 + 3] === 0) isEdge = true;
+                        else if (y > 0 && oldData[idx - width * 4 + 3] === 0) isEdge = true;
+                        else if (y < height - 1 && oldData[idx + width * 4 + 3] === 0) isEdge = true;
+
+                        if (isEdge) {
+                            data[idx + 3] = 0; // Erode it
+                        }
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            const newState = canvas.toDataURL();
+            setHistory(prev => [...prev, newState]);
+            setLoading(false);
+        }, 10);
+    };
+
+    return (
+        <div className="flex flex-col gap-6 animate-fade-in">
+            <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
+                <div className="flex justify-between items-center mb-4">
+                    <label className="font-diablo text-green-500 text-[10px] uppercase">Oczyszczalnia Artefaktów</label>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleUndo}
+                            disabled={history.length <= 1}
+                            className="bg-black border border-stone-700 text-stone-400 px-3 py-1 text-[10px] uppercase hover:bg-stone-800 disabled:opacity-50"
+                        >
+                            Cofnij
+                        </button>
+                        <button
+                            onClick={handleErode}
+                            disabled={!image || loading}
+                            className="bg-black border border-stone-700 text-stone-400 px-3 py-1 text-[10px] uppercase hover:bg-stone-800 disabled:opacity-50"
+                        >
+                            Zmniejsz Krawędź
+                        </button>
+                        <button
+                            onClick={() => { setImage(null); setHistory([]); }}
+                            className="bg-red-900/20 border border-red-900/50 text-red-500 px-3 py-1 text-[10px] uppercase hover:bg-red-900/40"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                {!image && (
+                    <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-stone-700 p-12 text-center cursor-pointer hover:border-green-500/50 transition-colors bg-black/50"
+                    >
+                        <p className="text-stone-500 text-xs font-serif">Kliknij, aby wgrać skażony artefakt</p>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUpload}
+                            className="hidden"
+                            ref={fileInputRef}
+                        />
+                    </div>
+                )}
+
+                {image && (
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col md:flex-row items-center gap-4 bg-black p-3 border border-stone-800">
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <label className="text-stone-400 text-[10px] uppercase whitespace-nowrap">Moc ({tolerance})</label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="100"
+                                    value={tolerance}
+                                    onChange={(e) => setTolerance(parseInt(e.target.value))}
+                                    className="w-full md:w-32 accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 border-l border-stone-800 pl-4">
+                                <span className="text-stone-500 text-[10px] uppercase">Tryb:</span>
+                                <button
+                                    onClick={() => setMode('contiguous')}
+                                    className={`px-2 py-1 text-[10px] uppercase border ${mode === 'contiguous' ? 'border-green-500 text-green-500 bg-green-900/20' : 'border-stone-700 text-stone-500'}`}
+                                >
+                                    Różdżka
+                                </button>
+                                <button
+                                    onClick={() => setMode('global')}
+                                    className={`px-2 py-1 text-[10px] uppercase border ${mode === 'global' ? 'border-blue-500 text-blue-500 bg-blue-900/20' : 'border-stone-700 text-stone-500'}`}
+                                >
+                                    Globalny
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 border-l border-stone-800 pl-4">
+                                <button
+                                    onClick={handleErode}
+                                    title="Usuwa 1px z krawędzi (na zieloną obwódkę)"
+                                    className="px-2 py-1 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors"
+                                >
+                                    Zmniejsz Krawędź
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="relative border border-stone-700 bg-checkerboard overflow-hidden flex justify-center bg-stone-900">
+                            <canvas
+                                ref={canvasRef}
+                                onClick={handleCanvasClick}
+                                className={`max-w-full max-h-[60vh] ${loading ? 'cursor-wait' : 'cursor-crosshair'}`}
+                            />
+                            {loading && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                    <span className="text-green-500 font-diablo animate-pulse">Oczyszczanie...</span>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-center text-[10px] text-stone-500 uppercase">Kliknij na kolor, aby go usunąć ({mode === 'contiguous' ? 'Sąsiadujące' : 'Wszystkie'})</p>
+
+                        <div className="flex justify-center">
+                            <a
+                                href={history[history.length - 1]}
+                                download="cleaned_artifact.png"
+                                className="border border-green-900 text-green-500 px-8 py-2 font-diablo text-xs uppercase hover:bg-green-900/20 transition-colors"
+                            >
+                                Pobierz Wynik
+                            </a>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};

@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanktuarium - Demo Margonem Style</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #050505;
+            --color-border: #3d3d3d;
+            --color-accent: #c21e1e;
+            --color-gold: #cfaa6e;
+            --color-text: #a8a8a8;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+            color: var(--color-text);
+            font-family: 'Cinzel', serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            /* No scrolling in game mode */
+            user-select: none;
+        }
+
+        /* --- CHARACTER SELECT SCREEN --- */
+        #selectScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.5s;
+        }
+
+        #selectScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--color-accent);
+            text-shadow: 0 0 20px rgba(194, 30, 30, 0.5), 0 5px 10px black;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            border-bottom: 2px solid var(--color-border);
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: var(--color-gold);
+            margin-bottom: 30px;
+            font-weight: 400;
+        }
+
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            perspective: 1000px;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding-bottom: 100px;
+        }
+
+        .card {
+            background: linear-gradient(180deg, #111 0%, #080808 100%);
+            border: 1px solid var(--color-border);
+            width: 140px;
+            height: 220px;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .card:hover {
+            transform: translateY(-5px) scale(1.05);
+            border-color: var(--color-gold);
+            z-index: 10;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        .card.selected {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 20px rgba(194, 30, 30, 0.6);
+            transform: scale(1.05);
+            z-index: 20;
+        }
+
+        .card-image-container {
+            width: 100%;
+            height: 70%;
+            overflow: hidden;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            transition: transform 0.5s ease;
+            filter: grayscale(40%) contrast(1.2);
+        }
+
+        .card:hover .card-image {
+            transform: scale(1.1);
+            filter: grayscale(0%) contrast(1.1);
+        }
+
+        .card-content {
+            padding: 8px;
+            height: 30%;
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+        }
+
+        .class-name {
+            font-size: 0.75rem;
+            color: var(--color-gold);
+            text-transform: uppercase;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .select-btn {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            padding: 2px;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            transition: all 0.3s;
+            margin-top: 2px;
+            width: 100%;
+        }
+
+        .card:hover .select-btn {
+            background: var(--color-gold);
+            color: black;
+            font-weight: bold;
+        }
+
+        .card.selected .select-btn {
+            background: var(--color-accent);
+            color: white;
+            border-color: red;
+        }
+
+        .orb {
+            position: fixed;
+            bottom: 20px;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #ff4d4d, #800000, #330000);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--color-accent), inset 0 0 15px black;
+            border: 3px solid #333;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: white;
+            text-shadow: 0 0 5px black;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .orb:hover {
+            transform: scale(1.1);
+            filter: brightness(1.2);
+        }
+
+        .orb-right {
+            right: 20px;
+            background: radial-gradient(circle at 30% 30%, #4d79ff, #002280, #000c33);
+            box-shadow: 0 0 20px #0044ff;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .orb-right.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* --- GAME SCREEN (Margonem Style) --- */
+        #gameScreen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: #000;
+        }
+
+        #gameScreen.active {
+            display: block;
+        }
+
+        /* Layout Grid for Game Interface - NO CHAT */
+        .game-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 60px 1fr;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            grid-column: 1 / -1;
+            background: #111;
+            border-bottom: 2px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 33%;
+        }
+
+        .player-avatar-mini {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--color-gold);
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .player-bars {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .bar {
+            height: 8px;
+            background: #333;
+            border: 1px solid #555;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        .hp {
+            background: #b30000;
+        }
+
+        .mana {
+            background: #0044cc;
+        }
+
+        .exp {
+            background: #d4af37;
+            height: 4px;
+            margin-top: 2px;
+        }
+
+        /* Game Map Area */
+        .game-map-container {
+            grid-column: 2;
+            grid-row: 2;
+            position: relative;
+            background: linear-gradient(to bottom, #050505 0%, #1a1a1a 100%);
+            overflow: hidden;
+            border: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1200px;
+            /* ENABLES 3D DEPTH */
+        }
+
+        /* The actual game world - ISOMETRIC VIEW */
+        #worldGrid {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            background-color: #1a1a1a;
+            /* Side View Tilted Perspective */
+            transform: rotateX(60deg);
+            transform-style: preserve-3d;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) inset;
+            border: 10px solid #111;
+            left: 0;
+            top: 0;
+
+            /* SMOOTH CAMERA - 180ms linear */
+            transition: transform 0.18s linear;
+
+            /* Grid floor texture - NOW HANDLED BY TILES */
+            background-color: #0b1a0b;
+            border: 10px solid #0d1a0d;
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9);
+            transform-style: preserve-3d;
+        }
+
+        .tile {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background-color: #1a2f1a;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+        }
+
+        .entity {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+
+            /* NO TRANSITION - instant snap, camera handles all smoothness */
+            transition: none;
+
+            transform-style: preserve-3d;
+            transform: translate3d(0, 0, 10px) rotateX(-60deg) translate(0, -50%) scale(1.0);
+            transform-origin: bottom center;
+
+            /* REMOVED BACKGROUND/PADDING PER USER REQUEST */
+            background: none;
+            padding: 0;
+            border: none;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            /* will-change: transform; -> Optimization */
+            will-change: transform;
+            filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.5));
+        }
+
+        .player-token {
+            z-index: 100;
+        }
+
+        .player-token img {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            /* Capsule shape */
+            /* Removed red shadow/border per request */
+            /* border: 2px solid var(--color-gold); */
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            object-fit: cover;
+        }
+
+        .npc {
+            /* Removed red bg */
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            font-size: 20px;
+        }
+
+        /* Panels */
+        .panel {
+            background: rgba(10, 10, 10, 0.95);
+            border: 2px solid var(--color-border);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
+        }
+
+        /* Hiding Panels Logic */
+        .game-layout.menu-hidden {
+            grid-template-columns: 0px 1fr 0px;
+            /* Collapse side columns */
+        }
+
+        .game-layout.menu-hidden .panel {
+            transform: scaleX(0);
+            opacity: 0;
+            padding: 0;
+            border: none;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .left-panel {
+            grid-column: 1;
+            grid-row: 2 / 4;
+            border-right: none;
+        }
+
+        .right-panel {
+            grid-column: 3;
+            grid-row: 2 / 4;
+            border-left: none;
+        }
+
+        /* Chat Removed */
+
+        /* Stats */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 2px;
+        }
+
+        .stat-val {
+            color: var(--color-gold);
+            font-weight: bold;
+        }
+
+        .eq-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .eq-slot {
+            aspect-ratio: 1;
+            background: #222;
+            border: 1px solid #444;
+        }
+
+        /* --- ARENA SCREEN (HoMM Style) --- */
+        #arenaScreen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #050505;
+            z-index: 1000;
+        }
+
+        #arenaScreen.active {
+            display: flex;
+        }
+
+        .arena-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .arena-sidebar {
+            width: 250px;
+            background: #111;
+            border-right: 2px solid var(--color-border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .arena-main {
+            flex: 1;
+            position: relative;
+            background: #050505;
+            /* Removed image, dark bg */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1200px;
+        }
+
+        /* Arena Grid - Smaller, focused */
+
+        /* Arena Grid - Larger & More Tiles */
+        #arenaGrid {
+            position: relative;
+            width: 768px;
+            /* 12 * 64 */
+            height: 640px;
+            /* 10 * 64 */
+            /* Side View Perspective */
+            transform: rotateX(60deg) translateY(50px);
+            transform-style: preserve-3d;
+            background-color: rgba(0, 0, 0, 0.2);
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 64px 64px;
+            /* Bigger tiles for battle */
+            border: none;
+            box-shadow: none;
+        }
+
+        .arena-tile {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .arena-tile.move-range {
+            background: rgba(0, 255, 0, 0.2);
+            cursor: pointer;
+            border: 1px solid lime;
+        }
+
+        .arena-tile.attack-range {
+            background: rgba(255, 0, 0, 0.3);
+            cursor: pointer;
+            border: 1px solid red;
+        }
+
+        .arena-tile:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .arena-unit {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+            /* Billboard logic - counteract grid rotateX(60deg) */
+            /* Slimmer: scale(1.4, 1.8) -> narrower width */
+            transform: translate3d(0, 0, 0) rotateX(-60deg) translate(0, -90%) scale(1.4, 1.8);
+            pointer-events: none;
+            transition: all 0.4s ease;
+        }
+
+        .arena-unit img {
+            width: 80px;
+            height: 80px;
+            filter: drop-shadow(0 10px 5px black);
+        }
+
+        .arena-unit-hp {
+            position: absolute;
+            top: -20px;
+            background: black;
+            border: 1px solid #555;
+            height: 6px;
+            width: 40px;
+        }
+
+        .arena-unit-hp-fill {
+            height: 100%;
+            background: lime;
+            width: 100%;
+        }
+
+        .enemy .arena-unit-hp-fill {
+            background: red;
+        }
+
+        .action-btn {
+            background: #222;
+            color: var(--color-gold);
+            border: 1px solid var(--color-border);
+            padding: 10px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #333;
+            border-color: var(--color-gold);
+        }
+
+        /* MOBILE CONTROLS */
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            z-index: 200;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 5px;
+            /* Only show on touch devices or small screens if desired, forcing for now as requested */
+        }
+
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            touch-action: manipulation;
+            /* Prevent zoom/scroll */
+            cursor: pointer;
+        }
+
+        .dpad-btn:active,
+        .dpad-btn.active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: var(--color-gold);
+            color: white;
+        }
+
+        .dpad-up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .dpad-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .dpad-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .dpad-down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        /* Mobile Responsive Fixes */
+        @media (max-width: 600px) {
+            .top-bar {
+                padding: 10px 5px;
+                gap: 5px;
+                flex-wrap: wrap;
+                height: auto;
+                font-size: 11px;
+            }
+
+            .player-info {
+                width: 100%;
+                order: 3;
+                /* Move to bottom line if needed */
+                margin-top: 5px;
+            }
+
+            /* Or keep simple row */
+            .top-bar {
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .top-bar>div {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SELECT SCREEN -->
+    <div id="selectScreen">
+        <div class="container" style="text-align: center; padding-top: 20px;">
+            <h1>Wybierz Postać</h1>
+            <h2>Kto wkroczy do świata cieni?</h2>
+            <div class="grid" id="charGrid"></div>
+        </div>
+        <div class="orb orb-right" id="playBtn" onclick="startGame()">GRAJ</div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="gameScreen">
+        <!-- Default: Menu hidden -->
+        <div class="game-layout menu-hidden" id="gameLayout">
+            <!-- TOP BAR -->
+            <div class="top-bar">
+                <button onclick="toggleMenu()"
+                    style="background:var(--color-bg); border:1px solid var(--color-gold); color:var(--color-gold); padding:5px 10px; cursor:pointer;">☰
+                    MENU</button>
+                <div class="player-info">
+                    <img id="hudAvatar" class="player-avatar-mini" src="" alt="Avatar">
+                    <div class="player-bars">
+                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#ccc;">
+                            <span id="hudName">Player</span>
+                            <span>Lvl 1</span>
+                        </div>
+                        <div class="bar hp">
+                            <div class="bar-fill" style="width: 100%"></div>
+                        </div>
+                        <div class="bar mana">
+                            <div class="bar-fill" style="width: 80%"></div>
+                        </div>
+                        <div class="bar exp">
+                            <div class="bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex:1; text-align:center; color:#555; letter-spacing:2px;">MROCZNA PUSZCZA (12, 11)</div>
+                <div style="width: 33%; text-align: right; color: var(--color-gold);">ZŁOTO: 0</div>
+            </div>
+
+            <!-- LEFT PANEL (Menu/Quests) -->
+            <div class="panel left-panel">
+                <h3 style="margin: 0 0 10px 0; color:var(--color-accent); font-size:14px; text-transform:uppercase;">
+                    Zadania</h3>
+                <ul style="list-style:none; padding:0; font-size:11px; color:#888;">
+                    <li>▹ Zabij Szczury (0/5)</li>
+                    <li>▹ Znajdź Stary Miecz</li>
+                </ul>
+            </div>
+
+            <!-- GAME MAP -->
+            <div class="game-map-container">
+                <div id="worldGrid">
+                    <!-- Player inserted by JS -->
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL (Stats/Eq) -->
+            <div class="panel right-panel">
+                <h3 style="margin: 0 0 10px 0; color:var(--color-gold); font-size:14px; text-transform:uppercase;">
+                    Statystyki</h3>
+                <div class="stat-row"><span>Siła</span><span class="stat-val">10</span></div>
+                <div class="stat-row"><span>Zręczność</span><span class="stat-val">5</span></div>
+                <div class="stat-row"><span>Inteligencja</span><span class="stat-val">2</span></div>
+                <div class="stat-row"><span>Pancerz</span><span class="stat-val">15</span></div>
+
+                <h3 style="margin: 20px 0 5px 0; color:#888; font-size:12px;">EKWIPUNEK</h3>
+                <div class="eq-grid">
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                    <div class="eq-slot"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Mobile D-Pad -->
+        <div id="mobileControls">
+            <div class="dpad-btn dpad-up" data-key="ArrowUp">▲</div>
+            <div class="dpad-btn dpad-left" data-key="ArrowLeft">◀</div>
+            <div class="dpad-btn dpad-right" data-key="ArrowRight">▶</div>
+            <div class="dpad-btn dpad-down" data-key="ArrowDown">▼</div>
+        </div>
+    </div>
+
+    <!-- ARENA SCREEN -->
+    <div id="arenaScreen">
+        <div class="arena-layout">
+            <div class="arena-sidebar">
+                <h2 style="margin-bottom: 10px; border-bottom: 1px solid #333; color:var(--color-gold);">Kolejka</h2>
+                <div id="turnOrderList" style="flex:1; display:flex; flex-direction:column; gap:10px;">
+                    <!-- Units cards go here -->
+                </div>
+
+                <h2 style="margin: 10px 0; border-bottom: 1px solid #333; color:var(--color-accent);">Akcje</h2>
+                <button class="action-btn" onclick="battleState.endTurn()">Czekaj</button>
+                <button class="action-btn" onclick="battleState.endTurn()">Obrona</button>
+                <div id="battleLog"
+                    style="height: 150px; background:#000; border:1px solid #333; font-size:10px; padding:5px; overflow-y:auto; font-family:'Roboto Mono'; color: #888;">
+                    > Rozpoczęcie walki...
+                </div>
+            </div>
+            <div class="arena-main">
+                <div id="arenaGrid">
+                    <!-- Tiles & Units generated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const allCharacters = [
+            { file: 'cyberwojownik.png', role: 'Techno-Barbarzyńca' },
+            { file: 'cyberwojownik2.png', role: 'Cyber-Łowca' },
+            { file: 'druid (2).png', role: 'Władca Natury' },
+            { file: 'druid2.png', role: 'Zmory Lasu' },
+            // { file: 'mag1.png', role: 'Czarownik Ognia' }, // REMOVED
+            { file: 'magg.png', role: 'Arcymag' },
+            { file: 'Nekromanta.png', role: 'Władca Śmierci' },
+            { file: 'nekromanta2.png', role: 'Lisze Król' },
+            { file: 'Obronca.png', role: 'Strażnik Sanktuarium' },
+            { file: 'obronca2.png', role: 'Pancerny' },
+            { file: 'wilkolak.png', role: 'Bestia Nocy' },
+            // { file: 'wilkolak2.png', role: 'Likantrop' }, // REMOVED as requested
+            { file: 'wojownik.png', role: 'Mistrz Miecza' },
+            { file: 'wojowniczka.png', role: 'Walkiria' }
+        ];
+
+        let selectedHero = null;
+        let playerPos = { x: 30, y: 30 }; // Center of new 60x60 map
+        const TILE_SIZE = 32;
+
+        // MOVEMENT STATE
+        const keys = {};
+        let isMoving = false;
+        let lastMoveTime = 0;
+        const MOVE_COOLDOWN = 180; // ms - MATCHES CSS TRANSITION 0.18s
+
+        // --- ARENA STATE ---
+        const battleState = {
+            active: false,
+            units: [],
+            currentUnitIndex: 0,
+            gridSize: { x: 12, y: 10 }, // Arena size increased
+            tileSize: 64,
+
+            log: (msg) => {
+                const log = document.getElementById('battleLog');
+                log.innerHTML += `<div>> ${msg}</div>`;
+                log.scrollTop = log.scrollHeight;
+            },
+
+            endTurn: () => {
+                // Next unit
+                battleState.currentUnitIndex = (battleState.currentUnitIndex + 1) % battleState.units.length;
+                battleState.startTurn();
+            },
+
+            startTurn: () => {
+                const unit = battleState.units[battleState.currentUnitIndex];
+                battleState.log(`Tura: <span style="color:${unit.isPlayer ? 'lime' : 'red'}">${unit.name}</span>`);
+                highlightUnit(unit);
+
+                if (!unit.isPlayer) {
+                    setTimeout(aiTurn, 1000);
+                }
+            }
+        };
+
+        // --- INIT SELECTOR ---
+        const grid = document.getElementById('charGrid');
+
+        allCharacters.forEach((char) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            const cleanName = char.file.split('.')[0].replace(/[0-9]/g, '').replace(' (', '').replace(')', '');
+
+            card.innerHTML = `
+                <div class="card-image-container">
+                    <img src="img/${char.file}" class="card-image" alt="${cleanName}">
+                </div>
+                <div class="card-content">
+                    <div class="class-name">${cleanName}</div>
+                    <div class="class-role" style="display:none">${char.role}</div>
+                    <button class="select-btn">Wybierz</button>
+                </div>
+            `;
+
+            card.onclick = () => {
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('selected');
+                    c.querySelector('.select-btn').innerText = "Wybierz";
+                });
+                card.classList.add('selected');
+                card.querySelector('.select-btn').innerText = "Wybrano";
+                selectedHero = { ...char, name: cleanName };
+                document.getElementById('playBtn').classList.add('visible');
+            };
+            grid.appendChild(card);
+        });
+
+        // --- GAME LOGIC ---
+        function startGame() {
+            if (!selectedHero) return;
+
+            // Transition UI
+            document.getElementById('selectScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('active');
+
+            // Setup HUD
+            document.getElementById('hudAvatar').src = `img/${selectedHero.file}`;
+            document.getElementById('hudName').innerText = selectedHero.name.toUpperCase();
+
+            // Spawn World first so player entity exists
+            createWorld();
+
+            // Wait for layout to update so updateCamera can read container width/height
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    updatePlayerPosition();
+                });
+            });
+
+            // Log
+            addToChat(`System: Wybrano postać ${selectedHero.name}.`, 'chat-sys');
+
+            // Listeners
+            window.addEventListener('keydown', e => keys[e.key] = true);
+            window.addEventListener('keyup', e => keys[e.key] = false);
+
+            // Start Game Loop
+            if (!isMoving) requestAnimationFrame(gameLoop);
+        }
+
+        // GAME LOOP for Smooth Movement
+        function gameLoop(timestamp) {
+            if (!battleState.active && selectedHero) {
+                let dx = 0;
+                let dy = 0;
+
+                if (keys['ArrowUp'] || keys['w']) dy = -1;
+                else if (keys['ArrowDown'] || keys['s']) dy = 1;
+                else if (keys['ArrowLeft'] || keys['a']) dx = -1;
+                else if (keys['ArrowRight'] || keys['d']) dx = 1;
+
+                if (dx !== 0 || dy !== 0) {
+                    attemptMove(dx, dy);
+                }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function attemptMove(dx, dy) {
+            if (isMoving) return;
+
+            let nextX = playerPos.x + dx;
+            let nextY = playerPos.y + dy;
+
+            // Bounds (60x60 map)
+            if (nextX < 0 || nextX >= 60 || nextY < 0 || nextY >= 60) return;
+
+            // Basic Collision (Collision map ideally, but for now allow all except borders)
+
+            isMoving = true;
+            playerPos.x = nextX;
+            playerPos.y = nextY;
+
+            updatePlayerPosition();
+
+            // Cooldown for smooth grid movement (matches CSS transition ~300ms but slightly faster for feel)
+            setTimeout(() => {
+                isMoving = false;
+            }, 200);
+        }
+
+        function createWorld() {
+            const world = document.getElementById('worldGrid');
+
+            // Generate Map Tiles
+            // Clear world first (except player if reusing)
+            world.innerHTML = '';
+
+            const MAP_SIZE = 60;
+
+            // Resize Map Container
+            world.style.width = (MAP_SIZE * TILE_SIZE) + 'px';
+            world.style.height = (MAP_SIZE * TILE_SIZE) + 'px';
+
+            world.innerHTML = '';
+
+            // GENERATE VILLAGE DATA
+            // 0: Grass, 1: Dirt Path, 2: Stone Floor (Plaza), 3: Wood Floor (House), 4: Wall
+            const mapData = new Array(MAP_SIZE).fill(0).map(() => new Array(MAP_SIZE).fill(0));
+
+            const centerX = Math.floor(MAP_SIZE / 2);
+            const centerY = Math.floor(MAP_SIZE / 2);
+
+            // 1. Main Roads (Cross)
+            for (let i = 0; i < MAP_SIZE; i++) {
+                mapData[centerY][i] = 1; // Horizontal
+                mapData[centerY + 1][i] = 1;
+                mapData[i][centerX] = 1; // Vertical
+                mapData[i][centerX + 1] = 1;
+            }
+
+            // 2. Central Plaza
+            for (let y = centerY - 5; y <= centerY + 6; y++) {
+                for (let x = centerX - 5; x <= centerX + 6; x++) {
+                    mapData[y][x] = 2;
+                }
+            }
+
+            // 3. Houses (Randomly placed in quadrants)
+            const houses = [
+                { x: centerX - 10, y: centerY - 10, w: 6, h: 5 },
+                { x: centerX + 8, y: centerY - 12, w: 5, h: 7 },
+                { x: centerX - 12, y: centerY + 8, w: 7, h: 5 },
+                { x: centerX + 10, y: centerY + 10, w: 6, h: 6 },
+                // More random houses
+                { x: 10, y: 10, w: 4, h: 4 },
+                { x: 40, y: 15, w: 5, h: 4 },
+                { x: 15, y: 45, w: 4, h: 5 },
+                { x: 45, y: 40, w: 6, h: 6 },
+            ];
+
+            houses.forEach(h => {
+                for (let py = h.y; py < h.y + h.h; py++) {
+                    for (let px = h.x; px < h.x + h.w; px++) {
+                        // Outer Wall
+                        if (px === h.x || px === h.x + h.w - 1 || py === h.y || py === h.y + h.h - 1) {
+                            if (px !== h.x + Math.floor(h.w / 2) && py !== h.y + h.h) // Door logic simplified
+                                mapData[py][px] = 4; // Wall
+                        } else {
+                            mapData[py][px] = 3; // Floor
+                        }
+                    }
+                }
+                // Door
+                mapData[h.y + h.h - 1][h.x + Math.floor(h.w / 2)] = 3;
+            });
+
+
+            // RENDER MAP (OSM/SVG Style)
+            for (let y = 0; y < MAP_SIZE; y++) {
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile-svg-container';
+                    tile.style.position = 'absolute';
+                    tile.style.left = (x * TILE_SIZE) + 'px';
+                    tile.style.top = (y * TILE_SIZE) + 'px';
+                    tile.style.width = TILE_SIZE + 'px';
+                    tile.style.height = TILE_SIZE + 'px';
+
+                    const type = mapData[y][x];
+                    let fillColor = '#1a2f1a';
+                    let strokeColor = '#2a4f2a';
+                    let detail = '';
+
+                    if (type === 0) { // Grass
+                        if (Math.random() > 0.8) fillColor = '#233823';
+                        if (Math.random() > 0.98) detail = `<circle cx="16" cy="16" r="2" fill="#4a7a4a" />`;
+                    } else if (type === 1) { // Dirt Path
+                        fillColor = '#4d3b2e';
+                        strokeColor = '#5e4b35';
+                        detail = `<rect x="5" y="5" width="5" height="5" fill="#3e2e26" />`;
+                    } else if (type === 2) { // Plaza Stone
+                        fillColor = '#555';
+                        strokeColor = '#666';
+                        detail = `<rect x="0" y="0" width="30" height="30" fill="none" stroke="#444" stroke-width="2" />`;
+                    } else if (type === 3) { // Wood Floor
+                        fillColor = '#654321';
+                        strokeColor = '#5C4033';
+                        detail = `<line x1="0" y1="8" x2="32" y2="8" stroke="#4e342e" /><line x1="0" y1="16" x2="32" y2="16" stroke="#4e342e" /><line x1="0" y1="24" x2="32" y2="24" stroke="#4e342e" />`;
+                    } else if (type === 4) { // Wall
+                        fillColor = '#333';
+                        strokeColor = '#111';
+                        // 3D Wall illusion with SVG? Just a dark block for now
+                        detail = `<rect x="0" y="0" width="32" height="32" fill="#222" /> <rect x="4" y="4" width="24" height="24" fill="#444" />`;
+                    }
+
+                    tile.innerHTML = `
+                        <svg width="${TILE_SIZE}" height="${TILE_SIZE}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="0" y="0" width="32" height="32" fill="${fillColor}" stroke="${strokeColor}" stroke-opacity="0.2" />
+                            ${detail}
+                        </svg>
+                    `;
+
+                    world.appendChild(tile);
+                }
+            }
+
+            // Add Player Entity
+            const player = document.createElement('div');
+            player.id = 'playerEntity';
+            player.className = 'entity player-token';
+            player.innerHTML = `<img src="img/${selectedHero.file}">`;
+            // Set initial Z-index
+            player.style.zIndex = Math.floor(playerPos.x + playerPos.y + 1);
+            world.appendChild(player);
+
+            // Add some dummy NPCs/Objects
+            spawnEntity(world, 10, 8, '🐀');
+            spawnEntity(world, 15, 14, '🕷️');
+            spawnEntity(world, 8, 12, '🌳');
+            spawnEntity(world, 20, 5, '🏰');
+        }
+
+        function spawnEntity(parent, x, y, icon) {
+            const el = document.createElement('div');
+            el.className = 'entity npc';
+            el.innerHTML = icon;
+            el.style.left = (x * TILE_SIZE) + 'px';
+            el.style.top = (y * TILE_SIZE) + 'px';
+            // Simple depth sorting
+            el.style.zIndex = Math.floor(x + y);
+
+            // Make enemies interactable
+            if (icon === '🐀' || icon === '🕷️') {
+                el.style.pointerEvents = 'auto';
+                el.style.cursor = 'pointer';
+                el.onclick = () => startBattle(icon === '🐀' ? 'Przerośnięty Szczur' : 'Wielki Pająk', icon);
+            }
+
+            parent.appendChild(el);
+        }
+
+        // --- ARENA LOGIC ---
+        function startBattle(enemyName, enemyIcon) {
+            battleState.active = true;
+            document.getElementById('arenaScreen').classList.add('active');
+
+            // Setup Arena Grid
+            const grid = document.getElementById('arenaGrid');
+            grid.innerHTML = '';
+            for (let y = 0; y < battleState.gridSize.y; y++) {
+                for (let x = 0; x < battleState.gridSize.x; x++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'arena-tile';
+                    tile.style.left = (x * battleState.tileSize) + 'px';
+                    tile.style.top = (y * battleState.tileSize) + 'px';
+                    tile.dataset.x = x;
+                    tile.dataset.y = y;
+                    tile.onclick = () => handleArenaClick(x, y);
+                    grid.appendChild(tile);
+                }
+            }
+
+            // Create Units (Adjust for new grid size)
+            battleState.units = [
+                { name: selectedHero.name, icon: `img/${selectedHero.file}`, maxHp: 100, hp: 100, x: 1, y: 4, isPlayer: true, id: 'hero' },
+                { name: enemyName, iconHtml: enemyIcon, maxHp: 50, hp: 50, x: 10, y: 4, isPlayer: false, id: 'enemy' }
+            ];
+
+            // Render Units
+            battleState.units.forEach(u => spawnArenaUnit(u));
+
+            battleState.currentUnitIndex = 0;
+            battleState.startTurn();
+        }
+
+        function spawnArenaUnit(unit) {
+            const el = document.createElement('div');
+            el.className = `arena-unit ${unit.isPlayer ? 'hero' : 'enemy'}`;
+            el.id = `unit-${unit.id}`;
+
+            let visual = '';
+            if (unit.icon) visual = `<img src="${unit.icon}">`;
+            else visual = `<div style="font-size:50px">${unit.iconHtml}</div>`;
+
+            el.innerHTML = `
+                <div class="arena-unit-hp"><div class="arena-unit-hp-fill" style="width:${(unit.hp / unit.maxHp) * 100}%"></div></div>
+                ${visual}
+            `;
+            updateArenaUnitPos(el, unit.x, unit.y);
+            document.getElementById('arenaGrid').appendChild(el);
+        }
+
+        function updateArenaUnitPos(el, x, y) {
+            el.style.left = (x * battleState.tileSize + battleState.tileSize / 2) + 'px';
+            el.style.top = (y * battleState.tileSize + battleState.tileSize / 2) + 'px';
+            el.style.zIndex = x + y + 10;
+        }
+
+        function highlightUnit(unit) {
+            // Simple visual cue for now
+            document.querySelectorAll('.arena-unit').forEach(u => u.style.filter = 'brightness(0.6)');
+            document.getElementById(`unit-${unit.id}`).style.filter = 'brightness(1.2) drop-shadow(0 0 10px gold)';
+        }
+
+        function handleArenaClick(x, y) {
+            const currentUnit = battleState.units[battleState.currentUnitIndex];
+            if (!currentUnit.isPlayer) return; // Wait for AI
+
+            // Simple movement logic
+            const dx = Math.abs(x - currentUnit.x);
+            const dy = Math.abs(y - currentUnit.y);
+
+            // Allow move to adjacent
+            if (dx <= 1 && dy <= 1 && (dx + dy) > 0) {
+                // Check if occupied
+                const target = battleState.units.find(u => u.x === x && u.y === y);
+                if (target) {
+                    // Combat Logic - Damage Variation
+                    const dmg = Math.floor(Math.random() * 10) + 10; // 10-20 dmg
+
+                    battleState.log(`${currentUnit.name} atakuje ${target.name} za ${dmg}!`);
+                    showFloatingText(target.x, target.y, `-${dmg}`, 'red');
+
+                    target.hp -= dmg;
+                    updateUnitVisuals(target);
+
+                    if (target.hp <= 0) {
+                        battleState.log(`${target.name} pokonany!`);
+                        showFloatingText(target.x, target.y, '☠', 'darkred');
+                        setTimeout(() => {
+                            document.getElementById('arenaScreen').classList.remove('active');
+                            battleState.active = false;
+                        }, 1500);
+                    }
+                } else {
+                    // Move
+                    currentUnit.x = x;
+                    currentUnit.y = y;
+                    updateArenaUnitPos(document.getElementById(`unit-${currentUnit.id}`), x, y);
+                }
+                battleState.endTurn();
+            }
+        }
+
+        function updateUnitVisuals(unit) {
+            const el = document.getElementById(`unit-${unit.id}`);
+            el.querySelector('.arena-unit-hp-fill').style.width = (unit.hp / unit.maxHp) * 100 + '%';
+        }
+
+        function aiTurn() {
+            const ai = battleState.units[battleState.currentUnitIndex];
+            const target = battleState.units.find(u => u.isPlayer);
+
+            if (!target || target.hp <= 0) { battleState.endTurn(); return; }
+
+            // Simple Chase
+            const dx = target.x - ai.x;
+            const dy = target.y - ai.y;
+
+            // Try to move closer
+            let moveX = ai.x;
+            let moveY = ai.y;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                moveX += Math.sign(dx);
+            } else {
+                moveY += Math.sign(dy);
+            }
+
+            // Interaction Check
+            if (moveX === target.x && moveY === target.y) {
+                // Attack Player
+                const dmg = Math.floor(Math.random() * 5) + 5; // 5-10 dmg
+                battleState.log(`${ai.name} gryzie ${target.name} za ${dmg}!`);
+                showFloatingText(target.x, target.y, `-${dmg}`, 'red');
+
+                target.hp -= dmg;
+                updateUnitVisuals(target);
+                if (target.hp <= 0) {
+                    battleState.log(`${target.name} padł! KONIEC GRY.`);
+                    setTimeout(() => location.reload(), 2000); // Reset for demo
+                }
+            } else {
+                // Check if tile free
+                const occupied = battleState.units.find(u => u.x === moveX && u.y === moveY);
+                if (!occupied) {
+                    ai.x = moveX;
+                    ai.y = moveY;
+                    updateArenaUnitPos(document.getElementById(`unit-${ai.id}`), moveX, moveY);
+                }
+            }
+
+            battleState.endTurn();
+        }
+
+        function showFloatingText(x, y, text, color) {
+            const grid = document.getElementById('arenaGrid');
+            const el = document.createElement('div');
+            el.innerText = text;
+            el.style.position = 'absolute';
+            el.style.left = (x * battleState.tileSize + 30) + 'px';
+            el.style.top = (y * battleState.tileSize) + 'px';
+            el.style.color = color || 'white';
+            el.style.fontSize = '24px';
+            el.style.fontWeight = 'bold';
+            el.style.textShadow = '0 0 5px black';
+            el.style.zIndex = 1000;
+            el.style.animation = 'floatUp 1s ease-out forwards';
+            el.style.pointerEvents = 'none';
+            // Simple transition
+            el.style.transition = 'all 1s';
+            setTimeout(() => { el.style.top = (y * battleState.tileSize - 50) + 'px'; el.style.opacity = 0; }, 50);
+
+            grid.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function updatePlayerPosition() {
+            // W tym trybie (Kamery za graczem) nie przesuwamy gracza na ekranie!
+            // Gracz zawsze zostaje na środku (w sensie logicznym), a przesuwamy MAPĘ.
+            // Ale dla zachowania hierarchii DOM, player jest w worldGrid.
+            // Więc player.style.left/top muszą odpowiadać jego pozycji na siatce.
+
+            const player = document.getElementById('playerEntity');
+            if (player) {
+                player.style.left = (playerPos.x * TILE_SIZE) + 'px';
+                player.style.top = (playerPos.y * TILE_SIZE) + 'px';
+                player.style.zIndex = Math.floor(playerPos.x + playerPos.y + 1);
+            }
+            updateCamera();
+        }
+
+        function updateCamera() {
+            const world = document.getElementById('worldGrid');
+            const container = document.querySelector('.game-map-container');
+
+            // Środek ekranu
+            const cx = container.offsetWidth / 2;
+            const cy = container.offsetHeight / 2;
+
+            // Pozycja gracza w świecie (w pikselach)
+            // Dodajemy TILE_SIZE/2 żeby celować w środek kafelka
+            const px = playerPos.x * TILE_SIZE + (TILE_SIZE / 2);
+            const py = playerPos.y * TILE_SIZE + (TILE_SIZE / 2);
+
+            // Przesuwamy świat tak, by gracz był w cx, cy
+            // world left = cx - px
+            // world top = cy - py
+            // Pamiętamy o rotateX(65deg)
+            // Transform: translation musi być zaaplikowane do kontenera lub do transformation matrix.
+            // Najprościej: przesunąć worldGrid metodą translate3d w jego lokalnym układzie? Nie, to przesunie go w 3D po pochyleniu.
+            // Musimy przesunąć 'left' i 'top' diva #worldGrid, albo użyć translate przed rotacją.
+
+            // W CSS mamy: transform: rotateX(65deg);
+            // Zmieńmy to na dynamiczne:
+
+            // worldGrid jest absolute. Zmieniajmy jego left/top.
+            // Defaultowo jest left: 50%, top: 25% co ustala "Anchor" transformacji.
+            // Aby "kamera" śledziła, musimy przesuwać worldGrid w PRZECIWNĄ stronę niż ruch gracza.
+            // Jeśli gracz idzie w prawo (x+), worldGrid musi iść w lewo (x-).
+
+            // UWAGA: rotacja X jest "w miejscu". Przesuwanie left/top działa w przestrzeni ekranu (Screen Space).
+            // A my chcemy przesuwać mapę w jej własnej płaszczyźnie (World Space)?
+            // Jeśli przesuniemy left/top, to cała pochylona płaszczyzna się przesunie.
+            // To zadziała, pod warunkiem, że przesunięcie w dół (Y) uwzględni skrót perspektywiczny?
+            // Nie, rotateX(65deg) skraca wizualnie Y.
+            // Jeśli przesuniemy worldGrid o 10px w dół (screen Y), to wizualnie przesunie się o 10px.
+            // Ale w świecie gry 10px "po podłodze" to mniej pikseli na ekranie (cos(65)).
+            // NIEPRAWDĘ mówię. Jeśli element jest obrócony, to jego osie lokalne też.
+            // Użyjmy transformacji w kolejności: translate(moveWorld) -> rotateX.
+
+            // Resetujemy defaultowe left/top z CSS
+            world.style.left = '0';
+            world.style.top = '0';
+            world.style.marginLeft = '0';
+
+            // CRITICAL: Set transform origin to 0 0 so our translations work as expected relative to top-left
+            world.style.transformOrigin = '0 0';
+
+            world.style.transform = `
+                translate3d(${cx}px, ${cy}px, 0) 
+                scale(3.5)
+                rotateX(60deg) 
+                translate3d(${-px}px, ${-py}px, 0)
+            `;
+        }
+
+
+        // Old handleInput removed in favor of gameLoop
+
+
+        function addToChat(msg, type = 'chat-msg') {
+            // Chat removed, but keeping function to prevent errors if called
+            // console.log(msg); 
+        }
+
+        window.addEventListener('resize', () => {
+            if (selectedHero) updateCamera();
+        });
+
+        function toggleMenu() {
+            const layout = document.getElementById('gameLayout');
+            layout.classList.toggle('menu-hidden');
+            // Camera update needed after transition finishes because centerpoint changes
+            setTimeout(updateCamera, 350);
+        }
+
+        // Mobile Controls handlers
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            const key = btn.dataset.key;
+
+            const startMove = (e) => {
+                e.preventDefault(); // Prevent scroll
+                if (keys[key]) return; // Already pressed
+                keys[key] = true;
+                btn.classList.add('active');
+                if (!isMoving) requestAnimationFrame(gameLoop);
+            };
+
+            const endMove = (e) => {
+                if (e.cancelable) e.preventDefault();
+                keys[key] = false;
+                btn.classList.remove('active');
+            };
+
+            // Mouse
+            btn.addEventListener('mousedown', startMove);
+            btn.addEventListener('mouseup', endMove);
+            btn.addEventListener('mouseleave', endMove);
+
+            // Touch
+            btn.addEventListener('touchstart', startMove, { passive: false });
+            btn.addEventListener('touchend', endMove, { passive: false });
+            btn.addEventListener('touchcancel', endMove, { passive: false });
+        });
+
+    </script>
+</body>
+
+</html>
