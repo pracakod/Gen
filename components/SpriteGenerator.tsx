@@ -312,12 +312,15 @@ export const SpriteGenerator: React.FC = () => {
         }
     };
 
-    const removeBlackBg = async (id: string) => {
+    const handleRemoveBg = async (id: string) => {
         setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
         const item = results.find(r => r.id === id);
         if (!item) return;
         try {
-            const newUrl = await removeBackground(item.url, 'black');
+            // Spróbuj usunąć tło na podstawie ustawienia autoRemoveBg, 
+            // ale jeśli to arkusz, preferuj inteligentne usunięcie czarnego tła lub bieli
+            const mode = autoRemoveBg ? 'white' : 'green';
+            const newUrl = await removeBackground(item.url, mode);
             setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false, originalUrl: item.url } : r));
         } catch (e) {
             setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
@@ -681,17 +684,19 @@ export const SpriteGenerator: React.FC = () => {
             {results.length > 0 && (
                 <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
                     <h3 className="text-stone-500 text-[10px] uppercase mb-4">Wygenerowane Sprite'y ({results.length})</h3>
-                    <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                    <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                         {results.map(r => (
-                            <div key={r.id} className="relative group flex flex-col gap-1">
-                                <div className="aspect-square bg-black border border-stone-800 overflow-hidden bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)]">
+                            <div key={r.id} className="relative group flex flex-col gap-1 bg-stone-900/40 p-1 border border-stone-800/50 hover:border-amber-900/50 transition-colors">
+                                <div className="aspect-square bg-black border border-stone-800 overflow-hidden bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)] shadow-inner">
                                     <img src={r.url} alt={r.direction} className={`w-full h-full object-contain transition-opacity ${r.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
 
-                                    {r.direction === 'sheet' && !r.isRemovingBg && (
-                                        <div className="absolute inset-0 bg-stone-900/90 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity p-2">
+                                    {/* Opcje dla arkuszy (generowanych i wgranych) oraz obrazków nie będących klatkami */}
+                                    {(r.direction === 'sheet' || r.id.startsWith('upload')) && !r.isRemovingBg && (
+                                        <div className="absolute inset-0 bg-stone-900/95 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity p-2 z-20">
+                                            <div className="text-[7px] text-amber-500 uppercase font-bold mb-1">Opcje Arkusza</div>
                                             <button
                                                 onClick={() => handleSlice(r, 'grid')}
-                                                className="w-full bg-amber-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-amber-800"
+                                                className="w-full bg-amber-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-amber-800 shadow-lg"
                                             >
                                                 Siatka {gridRows}x{gridCols}
                                             </button>
@@ -705,7 +710,7 @@ export const SpriteGenerator: React.FC = () => {
                                                 onClick={() => handlePreviewAnimation(r)}
                                                 className="w-full bg-emerald-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-emerald-800"
                                             >
-                                                ▶ Animuj
+                                                ▶ Animuj Wszystkie
                                             </button>
                                         </div>
                                     )}
@@ -724,10 +729,10 @@ export const SpriteGenerator: React.FC = () => {
                                             </button>
                                         ) : (
                                             <button
-                                                onClick={() => removeBlackBg(r.id)}
+                                                onClick={() => handleRemoveBg(r.id)}
                                                 disabled={r.isRemovingBg}
                                                 className="flex-1 bg-stone-900 text-stone-400 text-[8px] py-1 border border-stone-800 hover:text-white disabled:opacity-50"
-                                                title="Usuń czarne tło"
+                                                title="Usuń tło (Białe/Zielone zależnie od ustawień)"
                                             >
                                                 Wytnij
                                             </button>
