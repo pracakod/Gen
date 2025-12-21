@@ -98,6 +98,8 @@ export const SpriteGenerator: React.FC = () => {
 
     const [loading, setLoading] = useState(false);
     const [currentDirection, setCurrentDirection] = useState<string | null>(null);
+    const [gridRows, setGridRows] = useState(3);
+    const [gridCols, setGridCols] = useState(3);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Pobierz tagi dla aktualnego stylu
@@ -260,10 +262,8 @@ export const SpriteGenerator: React.FC = () => {
             let frames: string[] = [];
 
             if (mode === 'grid') {
-                frames = await sliceSpriteSheet(result.url, 3, 3);
+                frames = await sliceSpriteSheet(result.url, gridRows, gridCols);
             } else {
-                // Smart mode: first remove background to get transparency, then detect islands
-                // (Assumes current background removal is already applied or we apply it temporarily)
                 frames = await detectFrames(result.url);
             }
 
@@ -293,6 +293,10 @@ export const SpriteGenerator: React.FC = () => {
         } catch (e) {
             setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
         }
+    };
+
+    const undoRemoveBg = (id: string) => {
+        setResults(prev => prev.map(r => r.id === id && r.originalUrl ? { ...r, url: r.originalUrl, originalUrl: undefined } : r));
     };
 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -592,35 +596,57 @@ export const SpriteGenerator: React.FC = () => {
                     {loading && currentDirection ? `Generuję ${currentDirection.toUpperCase()}...` : getButtonText()}
                 </DiabloButton>
 
-                {results.length > 0 && (
-                    <button
-                        onClick={clearAll}
-                        className="w-full mt-2 text-red-900 text-[9px] uppercase py-1 border border-red-900/30 hover:bg-red-900/20"
-                    >
-                        Wyczyść wszystko
-                    </button>
-                )}
+                <div className="mt-4 pt-4 border-t border-stone-800 space-y-3">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[8px] text-stone-500 uppercase">Wymiary siatki (Wiersze x Kolumny)</span>
+                        <div className="flex gap-2">
+                            <select
+                                value={gridRows}
+                                onChange={(e) => setGridRows(Number(e.target.value))}
+                                className="flex-1 bg-stone-900 text-stone-300 text-[10px] border border-stone-800 p-1"
+                            >
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n} wierszy</option>)}
+                            </select>
+                            <select
+                                value={gridCols}
+                                onChange={(e) => setGridCols(Number(e.target.value))}
+                                className="flex-1 bg-stone-900 text-stone-300 text-[10px] border border-stone-800 p-1"
+                            >
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n} kolumn</option>)}
+                            </select>
+                        </div>
+                    </div>
 
-                <div className="mt-4 pt-4 border-t border-stone-800">
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleUpload}
-                        className="hidden"
-                        accept="image/*"
-                    />
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full bg-stone-800 text-stone-300 text-[9px] uppercase py-2 hover:bg-stone-700 transition-colors"
-                    >
-                        📂 Wgraj własny arkusz / obrazek
-                    </button>
+                    {results.length > 0 && (
+                        <button
+                            onClick={clearAll}
+                            className="w-full mt-2 text-red-900 text-[9px] uppercase py-1 border border-red-900/30 hover:bg-red-900/20"
+                        >
+                            Wyczyść wszystko
+                        </button>
+                    )}
+
+                    <div className="mt-4 pt-4 border-t border-stone-800">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleUpload}
+                            className="hidden"
+                            accept="image/*"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full bg-stone-800 text-stone-300 text-[9px] uppercase py-2 hover:bg-stone-700 transition-colors"
+                        >
+                            📂 Wgraj własny arkusz / obrazek
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Wyniki */}
             {results.length > 0 && (
-                <div className="bg-stone-900/90 p-6 border-2 border-stone-800">
+                <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
                     <h3 className="text-stone-500 text-[10px] uppercase mb-4">Wygenerowane Sprite'y ({results.length})</h3>
                     <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
                         {results.map(r => (
@@ -634,7 +660,7 @@ export const SpriteGenerator: React.FC = () => {
                                                 onClick={() => handleSlice(r, 'grid')}
                                                 className="w-full bg-amber-900/80 text-white text-[9px] py-1 uppercase font-bold hover:bg-amber-800"
                                             >
-                                                Siatka 3x3
+                                                Siatka {gridRows}x{gridCols}
                                             </button>
                                             <button
                                                 onClick={() => handleSlice(r, 'smart')}
@@ -650,14 +676,23 @@ export const SpriteGenerator: React.FC = () => {
                                         {r.direction}
                                     </span>
                                     <div className="flex gap-1">
-                                        <button
-                                            onClick={() => removeBlackBg(r.id)}
-                                            disabled={r.isRemovingBg}
-                                            className="flex-1 bg-stone-900 text-stone-400 text-[8px] py-1 border border-stone-800 hover:text-white disabled:opacity-50"
-                                            title="Usuń czarne tło"
-                                        >
-                                            Wytnij
-                                        </button>
+                                        {r.originalUrl ? (
+                                            <button
+                                                onClick={() => undoRemoveBg(r.id)}
+                                                className="flex-1 bg-amber-900/30 text-amber-500 text-[8px] py-1 border border-amber-900/30 hover:bg-amber-900/50"
+                                            >
+                                                Cofnij
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => removeBlackBg(r.id)}
+                                                disabled={r.isRemovingBg}
+                                                className="flex-1 bg-stone-900 text-stone-400 text-[8px] py-1 border border-stone-800 hover:text-white disabled:opacity-50"
+                                                title="Usuń czarne tło"
+                                            >
+                                                Wytnij
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => downloadImage(r.url, `sprite_${r.direction}.png`)}
                                             className="flex-1 bg-stone-900 text-stone-400 text-[8px] py-1 border border-stone-800 hover:text-white"

@@ -241,20 +241,39 @@ export const detectFrames = async (imageUrl: string): Promise<string[]> => {
             const { width, height } = canvas;
             const pixels = data.data;
 
-            // Simple clustering: find non-transparent islands
+            // Check if image is opaque (like JPG)
+            let isOpaque = true;
+            for (let i = 3; i < pixels.length; i += 40) { // Sample check
+                if (pixels[i] < 200) { isOpaque = false; break; }
+            }
+
+            // If opaque, detect background color from corners
+            let bgR = 0, bgG = 0, bgB = 0;
+            if (isOpaque) {
+                const corners = [0, (width - 1) * 4, (height - 1) * width * 4, (pixels.length - 4)];
+                corners.forEach(idx => {
+                    bgR += pixels[idx]; bgG += pixels[idx + 1]; bgB += pixels[idx + 2];
+                });
+                bgR /= 4; bgG /= 4; bgB /= 4;
+            }
+
             const visited = new Uint8Array(width * height);
             const frames: string[] = [];
 
             const isSolid = (x: number, y: number) => {
                 const idx = (y * width + x) * 4;
-                return pixels[idx + 3] > 20; // Alpha threshold
+                if (!isOpaque) return pixels[idx + 3] > 20;
+
+                // For opaque: check if significantly different from background (chroma key detection)
+                const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2];
+                const diff = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+                return diff > 50; // Threshold for content
             };
 
-            for (let y = 0; y < height; y += 4) { // Step for speed
-                for (let x = 0; x < width; x += 4) {
+            for (let y = 0; y < height; y += 8) { // Step for speed
+                for (let x = 0; x < width; x += 8) {
                     const idx = y * width + x;
                     if (!visited[idx] && isSolid(x, y)) {
-                        // Find bounding box using a quick scan
                         let minX = x, maxX = x, minY = y, maxY = y;
                         const stack = [[x, y]];
                         visited[idx] = 1;
@@ -264,8 +283,8 @@ export const detectFrames = async (imageUrl: string): Promise<string[]> => {
                             if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
                             if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
 
-                            // Check neighbors with larger step for island hopping
-                            const neighbors = [[cx + 8, cy], [cx - 8, cy], [cx, cy + 8], [cx, cy - 8]];
+                            // Dynamic neighbors for island hopping
+                            const neighbors = [[cx + 16, cy], [cx - 16, cy], [cx, cy + 16], [cx, cy - 16], [cx + 16, cy + 16], [cx - 16, cy - 16]];
                             for (const [nx, ny] of neighbors) {
                                 if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                                     const nIdx = ny * width + nx;
@@ -278,17 +297,32 @@ export const detectFrames = async (imageUrl: string): Promise<string[]> => {
                         }
 
                         // Pad bounding box
-                        minX = Math.max(0, minX - 10);
-                        minY = Math.max(0, minY - 10);
-                        maxX = Math.min(width - 1, maxX + 10);
-                        maxY = Math.min(height - 1, maxY + 10);
+                        minX = Math.max(0, minX - 15);
+                        minY = Math.max(0, minY - 15);
+                        maxX = Math.min(width - 1, maxX + 15);
+                        maxY = Math.min(height - 1, maxY + 15);
 
-                        if (maxX - minX > 20 && maxY - minY > 20) {
+                        // Only if big enough
+                        if (maxX - minX > width * 0.05 && maxY - minY > height * 0.05) {
                             const fCanvas = document.createElement('canvas');
                             fCanvas.width = maxX - minX;
                             fCanvas.height = maxY - minY;
                             const fCtx = fCanvas.getContext('2d')!;
                             fCtx.drawImage(img, minX, minY, fCanvas.width, fCanvas.height, 0, 0, fCanvas.width, fCanvas.height);
+
+                            // If it was opaque, we should make the detected background transparent in the frame
+                            if (isOpaque) {
+                                const fData = fCtx.getImageData(0, 0, fCanvas.width, fCanvas.height);
+                                for (let i = 0; i < fData.data.length; i += 4) {
+                                    const r = fData.data[i], g = fData.data[i + 1], b = fData.data[i + 2];
+                                    const d = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+                                    if (d < 60) { // Slight tolerance for background removal
+                                        fData.data[i + 3] = 0;
+                                    }
+                                }
+                                fCtx.putImageData(fData, 0, 0);
+                            }
+
                             frames.push(fCanvas.toDataURL());
                         }
                     }

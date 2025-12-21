@@ -12,21 +12,21 @@ const HERO_TAGS = {
     class: ['Wojownik', 'Mag', 'Łucznik', 'Paladyn', 'Nekromanta', 'Druid'],
     trait: ['Płonący', 'Mroźny', 'Złoty', 'Skażony', 'Eteryczny'],
     render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt'],
-    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
+    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   },
   cyberpunk: {
     race: ['Człowiek', 'Cyborg', 'Android', 'Syntetyk', 'Haker'],
     class: ['Netrunner', 'Solo', 'Techie', 'Fixer', 'Mercenary'],
     trait: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny', 'Wirtualny'],
     render: ['In-Game Tool', 'Blender 3D', 'Cinematic', 'Voxel'],
-    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
+    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   },
   pixelart: {
     race: ['Człowiek', 'Elf', 'Krasnolud', 'Ork', 'Szkielet'],
     class: ['Rycerz', 'Czarodziej', 'Złodziej', 'Kapłan', 'Ranger'],
     trait: ['8-bitowy', 'Legendarny', 'Ognisty', 'Leśny', 'Przeklęty'],
     render: ['Sprite Sheet', 'Blender 3D', 'Retro Render', 'HD-2D'],
-    pose: ['Neutralna', 'Bojowa', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
+    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   }
 };
 
@@ -129,13 +129,20 @@ export const AvatarGenerator: React.FC = () => {
     if (selectedTags.pose === 'Siedząca') poseDesc = "sitting down pose";
     if (selectedTags.pose === 'Kucająca') poseDesc = "crouching low pose";
     if (selectedTags.pose === 'Medytacja') poseDesc = "meditating pose, floating slightly or sitting lotus";
+    if (selectedTags.pose === 'Power Stance') poseDesc = "powerful heroic power stance, legs wide, looking intimidating";
+    if (selectedTags.pose === 'Portret') poseDesc = "portrait view, upper body and head, looking at camera";
+    if (selectedTags.pose === 'Popiersie') poseDesc = "bust view, head and shoulders only, detailed face";
     if (selectedTags.pose === 'Neutralna') poseDesc = "relaxed standing pose, arms at sides";
 
     if (prompt) parts.push(prompt);
 
     const baseText = parts.length > 0 ? parts.join(', ') : '[opis]';
     const enhancedUserText = enhanceUserPrompt(baseText, 'character');
-    const fitInFrame = `full body shot, ${poseDesc}, entire character must be fully visible and contained within the frame, not cut off, head and feet must be visible, centered composition`;
+
+    let fitInFrame = `full body shot, ${poseDesc}, entire character must be fully visible and contained within the frame, not cut off, head and feet must be visible, centered composition`;
+    if (selectedTags.pose === 'Portret' || selectedTags.pose === 'Popiersie') {
+      fitInFrame = `${poseDesc}, centered, framed properly, high detail`;
+    }
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
 
     if (autoRemoveBg) {
