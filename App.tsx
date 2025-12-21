@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useStyle } from './contexts/StyleContext';
 import { StyleSelector } from './components/StyleSelector';
@@ -10,8 +9,9 @@ import { LoreGenerator } from './components/LoreGenerator';
 import { MountGenerator } from './components/MountGenerator';
 import { PetGenerator } from './components/PetGenerator';
 import { PhotoShop } from './components/PhotoShop';
+import { SpriteGenerator } from './components/SpriteGenerator';
 
-type Tab = 'characters' | 'items' | 'monsters' | 'mounts' | 'pets' | 'locations' | 'lore' | 'photoshop';
+type Tab = 'characters' | 'items' | 'monsters' | 'mounts' | 'pets' | 'locations' | 'lore' | 'sprites' | 'photoshop';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('characters');
@@ -26,6 +26,7 @@ const App: React.FC = () => {
       case 'pets': return currentStyle === 'cyberpunk' ? 'Drony & Boty' : currentStyle === 'pixelart' ? 'Towarzysze' : 'Mroczni Towarzysze';
       case 'locations': return currentStyle === 'cyberpunk' ? 'Night City Dzielnice' : currentStyle === 'pixelart' ? 'Mapy' : 'Architektura Grozy';
       case 'lore': return currentStyle === 'cyberpunk' ? 'Dane z Sieci' : currentStyle === 'pixelart' ? 'Legendy' : 'Kroniki Sanktuarium';
+      case 'sprites': return currentStyle === 'cyberpunk' ? 'Sprite Generator' : currentStyle === 'pixelart' ? 'Pixel Sprite' : 'Sprite Sheet';
       case 'photoshop': return '🎨 PhotoSzopa';
     }
   };
@@ -39,6 +40,7 @@ const App: React.FC = () => {
       case 'pets': return currentStyle === 'cyberpunk' ? 'Drony bojowe i towarzysze AI.' : currentStyle === 'pixelart' ? 'Pixel-art towarzysze.' : 'Chowańce i zwierzęta.';
       case 'locations': return currentStyle === 'cyberpunk' ? 'Neonowe ulice i megabudynki.' : currentStyle === 'pixelart' ? 'Mapy i tła gry.' : 'Lochy i katedry.';
       case 'lore': return currentStyle === 'cyberpunk' ? 'Historia z sieci i plotki.' : currentStyle === 'pixelart' ? 'Opisy w stylu retro.' : 'Opisy, biografie i statystyki.';
+      case 'sprites': return 'Generuj sprite sheets z 8 kierunków do gier 2D.';
       case 'photoshop': return 'Narzędzia graficzne: ikony, usuwanie tła, edycja, warstwy.';
     }
   };
@@ -136,6 +138,7 @@ const App: React.FC = () => {
           {navButton('lore', currentStyle === 'cyberpunk' ? 'Dane' : 'Kroniki', navColors.lore)}
           {navButton('mounts', currentStyle === 'cyberpunk' ? 'Pojazdy' : 'Wierzchowce', navColors.mounts)}
           {navButton('pets', currentStyle === 'cyberpunk' ? 'Drony' : 'Towarzysze', navColors.pets)}
+          {navButton('sprites', '🎮 Sprites', 'bg-gradient-to-r from-emerald-900/40 to-cyan-900/40 text-emerald-100')}
           {navButton('photoshop', '📷 PhotoSzopa', 'bg-gradient-to-r from-amber-900/40 to-orange-900/40 text-amber-100')}
         </nav>
 
@@ -157,6 +160,7 @@ const App: React.FC = () => {
             {activeTab === 'lore' && <LoreGenerator />}
             {activeTab === 'mounts' && <MountGenerator />}
             {activeTab === 'pets' && <PetGenerator />}
+            {activeTab === 'sprites' && <SpriteGenerator />}
             {activeTab === 'photoshop' && <PhotoShop />}
           </section>
         </div>
