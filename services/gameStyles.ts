@@ -49,7 +49,7 @@ export const GAME_STYLES: Record<GameStyle, StyleConfig> = {
             accent: 'amber-700',
             bg: 'sanctuary-900'
         },
-        artStyle: "Diablo 4 concept art style, dark fantasy, gothic horror, oil painting texture, blizzard entertainment style, masterpiece, best quality, 8k resolution, cinematic lighting, volumetric fog, detailed textures",
+        artStyle: "Diablo 4 concept art style, dark fantasy, gothic horror, photorealistic, hyperrealistic, 8k resolution, cinematic lighting, volumetric fog, detailed textures, sharp focus, unreal engine 5 render",
         lighting: "dramatic chiaroscuro lighting, dark ominous atmosphere, rim lighting, gloom, shadows",
         environment: "dark dungeon background, cathedral ruins, sanctuary world atmosphere",
         negative: "bad anatomy, blurry, low quality, cartoon, anime, bright colors, happy, cute, text, watermark, signature, ugly face, deformed hands",

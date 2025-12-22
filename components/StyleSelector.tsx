@@ -25,7 +25,7 @@ export const StyleSelector: React.FC = () => {
           `}
                 >
                     <span className="text-base md:text-lg">{style.icon}</span>
-                    <span className="hidden sm:inline">{style.name}</span>
+                    <span className="text-[10px] md:text-sm whitespace-nowrap">{style.name}</span>
                 </button>
             ))}
         </div>

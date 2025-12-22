@@ -187,7 +187,7 @@ export const AvatarGenerator: React.FC = () => {
       fitInFrame = `medium shot, ${poseDesc}, centered in middle of frame, CLEAR WHITE SPACE ABOVE HEAD, framed properly with protective padding at the top and sides, high detail, no cropping`;
     }
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
-    const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, perfect anatomy, beautiful face, detailed eyes, detailed skin texture";
+    const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, photorealistic, hyperrealistic, sharp focus, perfect anatomy, beautiful face, detailed eyes, detailed skin texture";
 
     if (bgMode === 'transparent') {
       return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
