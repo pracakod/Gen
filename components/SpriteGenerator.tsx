@@ -226,6 +226,7 @@ export const SpriteGenerator: React.FC = () => {
         const base = getBasePrompt();
         const fitInFrame = "entire character must be fully visible and centered in frame, not cut off, whole body shown";
         const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
+        const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional game art, perfect anatomy";
 
         let bgPrompt = "";
         if (bgMode === 'transparent') {
@@ -240,10 +241,10 @@ export const SpriteGenerator: React.FC = () => {
         if (genMode === 'sheet') {
             const selectedLabels = selectedDirections.map(id => DIRECTIONS.find(d => d.id === id)?.label).join(', ');
             const allInOneNote = "COMPOSITE IMAGE, ALL VIEW ANGLES SHOWN TOGETHER ON ONE SINGLE IMAGE,";
-            return `SPRITE SHEET, ${allInOneNote} ${base}, multiple views including: ${selectedLabels}, character shown from different angles in a grid, ${fitInFrame}, ${cleanEdges}, ${styleConfig.artStyle}, ${bgPrompt}, high quality game asset, NO TEXT, ${styleConfig.negative}`;
+            return `${qualityBoost}, SPRITE SHEET, ${allInOneNote} ${base}, multiple views including: ${selectedLabels}, character shown from different angles in a grid, ${fitInFrame}, ${cleanEdges}, ${styleConfig.artStyle}, ${bgPrompt}, high quality game asset, NO TEXT, ${styleConfig.negative}`;
         }
 
-        return `${base}, ${directionAngle}, ${fitInFrame}, ${cleanEdges}, single character, ${styleConfig.artStyle}, ${bgPrompt}, NO TEXT, ${styleConfig.negative}`;
+        return `${qualityBoost}, ${base}, ${directionAngle}, ${fitInFrame}, ${cleanEdges}, single character, ${styleConfig.artStyle}, ${bgPrompt}, NO TEXT, ${styleConfig.negative}`;
     };
 
     // Generuj

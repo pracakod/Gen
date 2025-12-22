@@ -132,14 +132,15 @@ export const LocationGenerator: React.FC = () => {
 
         const baseText = parts.join(', ');
         const cleanEdges = "NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING"; // Lokacje czasem chcą mgeł, ale user chciał "bez mgieł dla łatwiejszego wycinania"
+        const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, stunning environment, atmospheric";
 
         if (bgMode === 'transparent') {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
+            return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
         } else if (bgMode === 'green') {
-            return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+            return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
         }
         const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
-        return `${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
+        return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
     };
 
     const getPlaceholder = () => {

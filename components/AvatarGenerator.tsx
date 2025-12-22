@@ -187,15 +187,16 @@ export const AvatarGenerator: React.FC = () => {
       fitInFrame = `medium shot, ${poseDesc}, centered in middle of frame, CLEAR WHITE SPACE ABOVE HEAD, framed properly with protective padding at the top and sides, high detail, no cropping`;
     }
     const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
+    const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, perfect anatomy, beautiful face, detailed eyes, detailed skin texture";
 
     if (bgMode === 'transparent') {
-      return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
+      return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
     } else if (bgMode === 'green') {
-      return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, NO GREEN CLOTHING`;
+      return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, NO GREEN CLOTHING, ${styleConfig.negative}`;
     }
 
     const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
-    return `${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, ${bgDesc}, NO TEXT, ${styleConfig.negative}`;
+    return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, ${bgDesc}, NO TEXT, ${styleConfig.negative}`;
   };
 
   const getPlaceholder = () => {
