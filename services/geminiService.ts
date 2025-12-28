@@ -1,7 +1,7 @@
-
+/// <reference types="vite/client" />
 import { GoogleGenAI } from "@google/genai";
 
-const DEFAULT_MODEL = 'gemini-2.5-flash-image';
+const DEFAULT_MODEL = 'imagen-3.0-generate-001';
 
 /**
  * Czyści prompt do absolutnego minimum dla darmowych modeli, 
@@ -38,48 +38,9 @@ export interface GeneratedImage {
   modelUsed: string;
 }
 
-export const generateAvatar = async (prompt: string, model: string = DEFAULT_MODEL): Promise<GeneratedImage> => {
-  if (model === 'free-pollinations') {
-    return { url: getFreeImageUrl(prompt), modelUsed: 'Moc Pustki (Free)' };
-  }
-
-  // Zawsze tworzymy nową instancję przed użyciem (wymóg bezpieczeństwa)
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-
-  try {
-    // Specjalna obsługa dla modelu Imagen (jeśli dostępny)
-    if (model.includes('imagen')) {
-      const response = await ai.models.generateImages({
-        model: model,
-        prompt: prompt,
-        config: { numberOfImages: 1, aspectRatio: '1:1' },
-      });
-      const base64 = response.generatedImages?.[0]?.image?.imageBytes;
-      if (base64) return { url: `data:image/png;base64,${base64}`, modelUsed: 'Imagen' };
-    }
-
-    // Standardowe generowanie Gemini (Flash/Pro)
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: { parts: [{ text: prompt }] },
-      config: { imageConfig: { aspectRatio: "1:1" } }
-    });
-
-    const parts = response.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if (part.inlineData) {
-        return {
-          url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`,
-          modelUsed: 'Gemini Flash'
-        };
-      }
-    }
-
-    throw new Error("Gemini nie zwróciło danych obrazu.");
-  } catch (error) {
-    console.warn("Gemini Error (Region/Quota), przełączam na fallback:", error);
-    return { url: getFreeImageUrl(prompt), modelUsed: 'Moc Pustki (Free)' };
-  }
+export const generateAvatar = async (prompt: string, _model: string = 'free-pollinations'): Promise<GeneratedImage> => {
+  // Używamy tylko Pollinations (darmowe, bez limitów)
+  return { url: getFreeImageUrl(prompt), modelUsed: 'Moc Pustki (Free)' };
 };
 
 export const editAvatar = async (base64Image: string, prompt: string): Promise<string> => {

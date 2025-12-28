@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Human ISO 2D - Proportions Fix</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1e1e1e;
+            font-family: 'Segoe UI', sans-serif;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 10px;
+            pointer-events: none;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #joystick-zone {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            z-index: 10;
+        }
+
+        #btn-attack {
+            position: absolute;
+            bottom: 60px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        #btn-attack:active {
+            transform: scale(0.92);
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: #888;
+            pointer-events: none;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui">
+        <strong>STAN POSTACI</strong><br>
+        Prędkość: <span id="dbg-speed" style="color:#4db6ac">0</span><br>
+        Kierunek: <span id="dbg-facing" style="color:#ffb74d">-</span>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="joystick-zone"></div>
+    <div id="btn-attack">👊</div>
+    <div class="hint">Lewa: Ruch | Prawa: Atak</div>
+
+    <script>
+        const WORLD = { TILE: 40, ISO_X: 1, ISO_Y: 0.5 };
+        const PHYSICS = { ACCEL: 1200, FRICTION: 10, MAX_SPEED: 220, MASS: 1 };
+        const COLORS = {
+            SKIN: '#ffdbac', SKIN_SHADOW: '#e0b080',
+            SHIRT: '#29b6f6', SHIRT_LIGHT: '#4fc3f7',
+            PANTS: '#263238', SHOES: '#212121', HAIR: '#5d4037'
+        };
+
+        class Vector {
+            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+            add(v) { this.x += v.x; this.y += v.y; return this; }
+            sub(v) { this.x -= v.x; this.y -= v.y; return this; }
+            mult(n) { this.x *= n; this.y *= n; return this; }
+            mag() { return Math.sqrt(this.x ** 2 + this.y ** 2); }
+            norm() { let m = this.mag(); if (m > 0) this.mult(1 / m); return this; }
+            clone() { return new Vector(this.x, this.y); }
+        }
+
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.input = new Vector(0, 0);
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+
+                this.mapSize = 20;
+                this.map = [];
+                for (let y = 0; y < this.mapSize; y++) {
+                    let row = [];
+                    for (let x = 0; x < this.mapSize; x++) {
+                        if (x === 0 || x === 19 || y === 0 || y === 19) row.push(3);
+                        else if (x > 5 && x < 10 && y > 5 && y < 10) row.push(1);
+                        else if (x > 12 && x < 16 && y > 12 && y < 16) row.push(2);
+                        else if ((x === 3 && y === 3) || (x === 16 && y === 4) || (x === 4 && y === 15)) row.push(4); // Drzewa
+                        else row.push(0);
+                    }
+                    this.map.push(row);
+                }
+
+                this.player = {
+                    pos: new Vector(10 * WORLD.TILE, 10 * WORLD.TILE),
+                    vel: new Vector(0, 0),
+                    dir: new Vector(0, 1),
+                    animTime: 0,
+                    idleTime: Math.random() * 10,
+                    isAttacking: false,
+                    attackTimer: 0,
+                    comboHand: 0,
+                    facing: 0,
+                    lastDx: 0,
+                    lastDy: 1,
+                    bodyRotation: 0,
+                    turnFactor: 1
+                };
+
+                this.camera = { x: 0, y: 0 };
+                this.setupInput();
+                this.lastTime = 0;
+                requestAnimationFrame(t => this.loop(t));
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            setupInput() {
+                const keys = {};
+                const updateKeys = () => {
+                    let x = 0, y = 0;
+                    if (keys['ArrowUp'] || keys['w']) y -= 1;
+                    if (keys['ArrowDown'] || keys['s']) y += 1;
+                    if (keys['ArrowLeft'] || keys['a']) x -= 1;
+                    if (keys['ArrowRight'] || keys['d']) x += 1;
+                    this.input = new Vector(x, y).norm();
+                };
+
+                window.addEventListener('keydown', e => {
+                    if (e.code === 'Space') this.triggerAttack();
+                    keys[e.key] = true; updateKeys();
+                });
+                window.addEventListener('keyup', e => { keys[e.key] = false; updateKeys(); });
+
+                const zone = document.getElementById('joystick-zone');
+                let start = null;
+
+                zone.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    const rect = zone.getBoundingClientRect();
+                    start = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                    this.handleJoystickMove(e.touches[0].clientX, e.touches[0].clientY, start);
+                }, { passive: false });
+
+                zone.addEventListener('touchmove', e => {
+                    if (!start) return;
+                    e.preventDefault();
+                    this.handleJoystickMove(e.touches[0].clientX, e.touches[0].clientY, start);
+                }, { passive: false });
+
+                zone.addEventListener('touchend', () => { start = null; this.input = new Vector(0, 0); });
+
+                const btnAttack = document.getElementById('btn-attack');
+                const attackFn = (e) => { e.preventDefault(); this.triggerAttack(); };
+                btnAttack.addEventListener('touchstart', attackFn, { passive: false });
+                btnAttack.addEventListener('mousedown', attackFn);
+            }
+
+            handleJoystickMove(clientX, clientY, start) {
+                let dx = clientX - start.x;
+                let dy = clientY - start.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                let max = 60;
+                if (dist > max) dist = max;
+                let angle = Math.atan2(dy, dx);
+                let force = dist / max;
+                this.input = new Vector(Math.cos(angle) * force, Math.sin(angle) * force);
+            }
+
+            triggerAttack() {
+                if (!this.player.isAttacking) {
+                    this.player.isAttacking = true;
+                    this.player.attackTimer = 0;
+                    this.player.comboHand = (this.player.comboHand + 1) % 2;
+                }
+            }
+
+            toIso(x, y) {
+                return {
+                    x: (x - y) * WORLD.TILE * WORLD.ISO_X,
+                    y: (x + y) * WORLD.TILE * WORLD.ISO_Y
+                };
+            }
+
+            update(dt) {
+                const p = this.player;
+
+                if (p.isAttacking) {
+                    p.attackTimer += dt * 3.5;
+                    if (p.attackTimer >= 1) {
+                        p.isAttacking = false;
+                        p.attackTimer = 0;
+                    }
+                }
+
+                let tx = Math.floor(p.pos.x / WORLD.TILE);
+                let ty = Math.floor(p.pos.y / WORLD.TILE);
+                let friction = PHYSICS.FRICTION;
+
+                if (tx >= 0 && tx < this.mapSize && ty >= 0 && ty < this.mapSize) {
+                    let type = this.map[ty][tx];
+                    if (type === 1) friction = 1.5;
+                    if (type === 2) friction = 15.0;
+                    if (type === 3 || type === 4) { // 4 = Drzewo (kolizja)
+                        p.pos.sub(p.vel.clone().mult(dt));
+                        p.vel.mult(-0.4);
+                    }
+                }
+
+                let isoInputX = this.input.x + this.input.y;
+                let isoInputY = this.input.y - this.input.x;
+                let driveVector = new Vector(isoInputX, isoInputY).norm();
+                let inputMag = this.input.mag();
+                let acc = driveVector.mult(PHYSICS.ACCEL * inputMag);
+                let speed = p.vel.mag();
+
+                if (speed > 0.1) {
+                    let fric = p.vel.clone().mult(-1).norm().mult(friction * speed);
+                    if (fric.mag() * dt > speed && inputMag === 0) p.vel = new Vector(0, 0);
+                    else acc.add(fric);
+                } else if (inputMag === 0) p.vel = new Vector(0, 0);
+
+                p.vel.add(acc.mult(dt));
+                if (p.vel.mag() > PHYSICS.MAX_SPEED) p.vel.norm().mult(PHYSICS.MAX_SPEED);
+                p.pos.add(p.vel.clone().mult(dt));
+
+                if (inputMag > 0.1) {
+                    p.dir = driveVector.clone().norm();
+                    p.lastDx = p.dir.x;
+                    p.lastDy = p.dir.y;
+
+                    let dx = this.input.x;
+                    let dy = this.input.y;
+                    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                    if (angle > -45 && angle < 45) p.facing = 2;
+                    else if (angle >= 45 && angle < 135) p.facing = 0;
+                    else if (angle >= 135 || angle <= -135) p.facing = 3;
+                    else if (angle > -135 && angle < -45) p.facing = 1;
+                }
+
+                let targetRot = 0;
+                if (p.facing === 2) targetRot = 1;
+                else if (p.facing === 3) targetRot = -1;
+                p.bodyRotation += (targetRot - p.bodyRotation) * 10 * dt;
+
+                let targetTurn = 1;
+                if (p.facing === 1) targetTurn = -1;
+                else if (p.facing === 0) targetTurn = 1;
+                if (p.facing === 2 || p.facing === 3) targetTurn = 0;
+                p.turnFactor += (targetTurn - p.turnFactor) * 8 * dt;
+
+                if (p.vel.mag() > 10) {
+                    p.animTime += dt * (p.vel.mag() / 14);
+                    p.idleTime = 0;
+                } else {
+                    p.animTime = 0;
+                    p.idleTime += dt * 0.8;
+                }
+
+                let targetIso = this.toIso(p.pos.x / WORLD.TILE, p.pos.y / WORLD.TILE);
+                this.camera.x += (targetIso.x - this.camera.x) * 0.08;
+                this.camera.y += (targetIso.y - this.camera.y) * 0.08;
+
+                let facingText = ["Przód", "Tył", "Prawo", "Lewo"][p.facing];
+                let elSpeed = document.getElementById('dbg-speed');
+                let elFacing = document.getElementById('dbg-facing');
+                if (elSpeed) elSpeed.innerText = Math.round(p.vel.mag());
+                if (elFacing) elFacing.innerText = facingText;
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                this.ctx.translate(this.canvas.width / 2 - this.camera.x, this.canvas.height / 2 - this.camera.y);
+
+                for (let y = 0; y < this.mapSize; y++) {
+                    for (let x = 0; x < this.mapSize; x++) {
+                        let iso = this.toIso(x, y);
+                        if (Math.abs(iso.x - this.camera.x) > this.canvas.width / 1.5) continue;
+                        if (Math.abs(iso.y - this.camera.y) > this.canvas.height / 1.5) continue;
+
+                        let type = this.map[y][x];
+                        this.ctx.fillStyle = type === 1 ? '#cfd8dc' : (type === 2 ? '#5d4037' : (type === 3 ? '#263238' : '#689f38'));
+                        this.ctx.beginPath(); this.ctx.moveTo(iso.x, iso.y);
+                        this.ctx.lineTo(iso.x + WORLD.TILE, iso.y + WORLD.TILE / 2);
+                        this.ctx.lineTo(iso.x, iso.y + WORLD.TILE);
+                        this.ctx.lineTo(iso.x - WORLD.TILE, iso.y + WORLD.TILE / 2);
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = 'rgba(0,0,0,0.1)'; this.ctx.stroke();
+
+                        if (type === 3) {
+                            this.ctx.fillStyle = '#37474f';
+                            this.ctx.fillRect(iso.x - WORLD.TILE, iso.y - 35, WORLD.TILE * 2, 35);
+                            this.ctx.fillStyle = '#455a64';
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(iso.x, iso.y - 35);
+                            this.ctx.lineTo(iso.x + WORLD.TILE, iso.y + WORLD.TILE / 2 - 35);
+                            this.ctx.lineTo(iso.x, iso.y + WORLD.TILE - 35);
+                            this.ctx.lineTo(iso.x - WORLD.TILE, iso.y + WORLD.TILE / 2 - 35);
+                            this.ctx.fill();
+                        }
+
+                        if (type === 4) { // Drzewo
+                            // Trawa pod drzewem
+                            this.ctx.fillStyle = '#689f38';
+                            this.ctx.beginPath(); this.ctx.moveTo(iso.x, iso.y);
+                            this.ctx.lineTo(iso.x + WORLD.TILE, iso.y + WORLD.TILE / 2);
+                            this.ctx.lineTo(iso.x, iso.y + WORLD.TILE);
+                            this.ctx.lineTo(iso.x - WORLD.TILE, iso.y + WORLD.TILE / 2);
+                            this.ctx.fill();
+
+                            this.drawTree(iso.x, iso.y);
+                        }
+                    }
+                }
+
+                this.drawHuman();
+                this.ctx.restore();
+            }
+
+            drawTree(x, y) {
+                // Pień
+                this.ctx.fillStyle = '#5d4037';
+                this.ctx.fillRect(x - 6, y - 20, 12, 20);
+
+                // Korona (3 warstwy)
+                this.ctx.fillStyle = '#2e7d32';
+                for (let i = 0; i < 3; i++) {
+                    let w = 24 - (i * 6);
+                    let h = 20;
+                    let by = y - 15 - (i * 12);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x - w, by);
+                    this.ctx.lineTo(x + w, by);
+                    this.ctx.lineTo(x, by - h);
+                    this.ctx.fill();
+                }
+            }
+
+            drawHuman() {
+                const p = this.player;
+                let iso = this.toIso(p.pos.x / WORLD.TILE, p.pos.y / WORLD.TILE);
+                let groundY = iso.y;
+                let centerX = iso.x;
+
+                let bob = 0;
+                if (p.vel.mag() > 10) bob = Math.abs(Math.sin(p.animTime)) * 3;
+                else bob = Math.sin(p.idleTime) * 1.5;
+
+                // FIX PROPORCJE: OBNIŻENIE STARTU NÓG (BIODER)
+                // Było -24, teraz -18. Tułów się wydłużył, nogi skróciły wizualnie u góry.
+                let hipY = groundY - 18 - bob;
+
+                // FIX: Nogi zaczynają się niżej (krok), żeby nie wychodziły z brzucha
+                // User: "troche za nisko" -> zmieniam z +12 na +9
+                let legStartY = hipY + 9;
+
+                this.ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(centerX, groundY, 14, 7, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                let isFacingRight = (p.facing === 2);
+                let isFacingLeft = (p.facing === 3);
+                let isFacingBack = (p.facing === 1);
+                let isFacingFront = (p.facing === 0);
+                let isSideView = (isFacingRight || isFacingLeft);
+
+                let visualIsBack = p.turnFactor < -0.2;
+                let dx = p.lastDx;
+                let dy = p.lastDy;
+
+                let rot = p.bodyRotation;
+                let faceOffset = rot * 6;
+
+                const drawLeg = (isLeft) => {
+                    let phase = isLeft ? 0 : Math.PI;
+                    let currentHipSpacing = 7 * (1 - Math.abs(rot) * 0.8);
+                    let hipOffset = isLeft ? -currentHipSpacing : currentHipSpacing;
+
+                    let swing = Math.cos(p.animTime + phase);
+                    if (isSideView) swing *= -1;
+
+                    let lift = Math.max(0, Math.sin(p.animTime + phase)) * 10;
+                    if (p.vel.mag() < 10) { swing = 0; lift = 0; }
+
+                    let hipPosX = centerX + hipOffset;
+                    let stride = 10;
+
+                    let legDirX = 0, legDirY = 0;
+                    if (isFacingRight) legDirX = 1;
+                    else if (isFacingLeft) legDirX = -1;
+                    else if (isFacingFront) legDirY = 1;
+                    else if (isFacingBack) legDirY = -1;
+
+                    let stepX = legDirX * swing * stride;
+                    let stepY = legDirY * swing * stride * 0.5;
+
+                    let footX = hipPosX + stepX;
+                    let footY = groundY + stepY - lift + 2;
+
+                    // Ograniczenie (żebra) dostosowane do nowego legStartY
+                    if (footY < legStartY + 8) footY = legStartY + 8;
+
+                    let kneeX = (hipPosX + footX) / 2 + (stepX * 0.3);
+                    let kneeY = (legStartY + footY) / 2 - (lift * 0.5);
+
+                    this.ctx.lineWidth = 7;
+                    this.ctx.strokeStyle = COLORS.PANTS;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(hipPosX, legStartY);
+                    this.ctx.quadraticCurveTo(kneeX, kneeY, footX, footY);
+                    this.ctx.stroke();
+
+                    this.ctx.fillStyle = COLORS.SHOES;
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(footX, footY, 5, 3, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                };
+
+                const drawArm = (isLeft) => {
+                    let phase = isLeft ? Math.PI : 0;
+                    let shoulderOffset = isLeft ? -11 : 11;
+                    shoulderOffset *= (1 - Math.abs(rot) * 0.7);
+
+                    let bodyShift = rot * 3;
+                    let shoulderX = centerX + shoulderOffset + bodyShift;
+
+                    // FIX RAMIONA: Skoro biodra niżej, ramiona też minimalnie niżej
+                    let shoulderY = hipY - 18; // Było -16, teraz -18 (dłuższy tułów)
+
+                    let handX, handY;
+                    let activeArm = (p.comboHand === 0) ? !isLeft : isLeft;
+
+                    if (p.isAttacking && activeArm) {
+                        let progress = p.attackTimer;
+                        let extension = 0;
+                        if (progress < 0.3) extension = progress / 0.3;
+                        else extension = 1 - ((progress - 0.3) / 0.7);
+
+                        let attackDirX = 0, attackDirY = 1;
+                        if (isFacingRight) { attackDirX = 1; attackDirY = 0; }
+                        else if (isFacingLeft) { attackDirX = -1; attackDirY = 0; }
+                        else if (isFacingBack) { attackDirX = 0; attackDirY = -1; }
+
+                        let reach = 25;
+                        handX = shoulderX + (attackDirX * reach * extension) + (attackDirX * 5);
+                        handY = shoulderY + 5 + (attackDirY * reach * extension * 0.5) - (extension * 8);
+
+                        if (progress > 0.1 && progress < 0.4) {
+                            this.ctx.save();
+                            this.ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(handX - attackDirX * 10, handY - attackDirY * 5);
+                            this.ctx.lineTo(handX, handY);
+                            this.ctx.stroke();
+                            this.ctx.restore();
+                        }
+                    } else {
+                        if (p.vel.mag() > 10) {
+                            let swing = Math.cos(p.animTime + phase) * 0.6;
+                            if (isSideView) {
+                                handX = shoulderX + (swing * 12);
+                                handY = shoulderY + 20;
+                            } else {
+                                handX = shoulderX + (swing * 3);
+                                handY = shoulderY + 20 - (Math.abs(swing) * 4);
+                            }
+                        } else {
+                            let idleSway = Math.sin(p.idleTime + phase);
+                            handX = shoulderX + idleSway * 1;
+                            handY = shoulderY + 20;
+                        }
+                    }
+
+                    this.ctx.strokeStyle = COLORS.SHIRT;
+                    this.ctx.lineWidth = 6;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(shoulderX, shoulderY);
+                    let elbowX, elbowY;
+                    if (isSideView && !p.isAttacking) {
+                        elbowX = (shoulderX + handX) / 2;
+                        elbowY = (shoulderY + handY) / 2 + 4;
+                    } else {
+                        elbowX = (shoulderX + handX) * 0.5;
+                        elbowY = (shoulderY + handY) * 0.5 + 5;
+                    }
+                    this.ctx.lineTo(elbowX, elbowY);
+                    this.ctx.stroke();
+                    this.ctx.strokeStyle = COLORS.SKIN;
+                    this.ctx.lineWidth = 5;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(elbowX, elbowY);
+                    this.ctx.lineTo(handX, handY);
+                    this.ctx.stroke();
+                    this.ctx.fillStyle = COLORS.SKIN;
+                    this.ctx.beginPath();
+                    let r = (p.isAttacking && activeArm) ? 5 : 3.5;
+                    this.ctx.arc(handX, handY, r, 0, Math.PI * 2);
+                    this.ctx.fill();
+                };
+
+                let drawOrder = [];
+                if (isFacingRight) drawOrder = [true, false];
+                else drawOrder = [false, true];
+
+                if (visualIsBack) { drawLeg(true); drawLeg(false); }
+                else { drawLeg(drawOrder[0]); }
+
+                if (isSideView) drawArm(drawOrder[0]);
+
+                // --- TUŁÓW (WYDŁUŻONY) ---
+                this.ctx.fillStyle = COLORS.SHIRT;
+                this.ctx.beginPath();
+                let skew = rot * 3;
+                let width = 12 - (Math.abs(rot) * 4);
+                let neckCurveY = (p.turnFactor * -3) - 21;
+
+                // Górna krawędź tułowia (barki) - teraz są wyżej względem bioder
+                let shoulderLineY = hipY - 24; // Tułów ma teraz ~24px wysokości od pasa do barków
+
+                this.ctx.moveTo(centerX - width + skew, shoulderLineY);
+                this.ctx.quadraticCurveTo(centerX + skew, hipY + neckCurveY - 4, centerX + width + skew, shoulderLineY);
+
+                // Dół tułowia (biodra)
+                this.ctx.lineTo(centerX + (width - 2) - skew, hipY + 8);
+                this.ctx.quadraticCurveTo(centerX - skew, hipY + 10, centerX - (width - 2) - skew, hipY + 8);
+                this.ctx.lineTo(centerX - width + skew, shoulderLineY);
+                this.ctx.fill();
+
+                // GŁOWA WYŻEJ (DOPASOWANIE DO WYDŁUŻONEGO TUŁOWIA)
+                let headY = hipY - 38; // Jeszcze wyżej (było -34)
+
+                let headForwardOffset = rot * 3;
+                let headCenterX = centerX + headForwardOffset;
+
+                this.ctx.fillStyle = COLORS.SKIN_SHADOW;
+                this.ctx.fillRect(headCenterX - 3, headY + 8, 6, 10);
+
+                this.ctx.fillStyle = COLORS.SKIN;
+                this.ctx.beginPath();
+                this.ctx.arc(headCenterX + (faceOffset * 0.3), headY, 11, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // --- NOWOCZESNE WŁOSY (Smooth transitions) ---
+                this.ctx.fillStyle = COLORS.HAIR;
+                this.ctx.beginPath();
+
+                // Baza włosów (czaszka)
+                let hairRadius = 12;
+                let hairY = headY - 2;
+
+                // Obliczanie przesunięcia grzywki/tyłu w zależności od kąta
+                // rot: 0 (przód), 1 (prawo), -1 (lewo), +/-2 (tył - w przybliżeniu)
+                // Używamy p.facing i p.turnFactor dla płynności
+
+                // Facing: 0=Front, 1=Back, 2=Right, 3=Left
+
+                // Rysowanie bazy
+                this.ctx.arc(headCenterX, hairY, hairRadius, 0, Math.PI * 2);
+
+                // Dodatki w zależności od strony, ale płynniej
+                let hairSideOffset = rot * 4;
+
+                // Góra - lekko nastroszona
+                this.ctx.moveTo(headCenterX - 10, hairY - 8);
+                this.ctx.quadraticCurveTo(headCenterX, hairY - 18, headCenterX + 10, hairY - 8);
+
+                // Jeśli tył, wydłużamy tył
+                if (visualIsBack) {
+                    this.ctx.lineTo(headCenterX + 12, hairY + 4);
+                    this.ctx.quadraticCurveTo(headCenterX, hairY + 8, headCenterX - 12, hairY + 4);
+                } else {
+                    // Przód/Bok - baczki i grzywka
+                    if (isSideView) {
+                        let dir = isFacingRight ? 1 : -1;
+                        // Grzywka
+                        this.ctx.lineTo(headCenterX + (12 * dir), hairY);
+                        this.ctx.quadraticCurveTo(headCenterX + (14 * dir), hairY + 5, headCenterX + (8 * dir), hairY + 8);
+                        // Tył głowy
+                        this.ctx.lineTo(headCenterX - (10 * dir), hairY + 6);
+                    } else {
+                        // Przód
+                        this.ctx.lineTo(headCenterX + 12, hairY);
+                        this.ctx.lineTo(headCenterX + 12, hairY + 6); // Baczki
+                        this.ctx.lineTo(headCenterX + 8, hairY + 4);
+                        // Grzywka
+                        this.ctx.quadraticCurveTo(headCenterX, hairY + 2, headCenterX - 8, hairY + 4);
+                        this.ctx.lineTo(headCenterX - 12, hairY + 6); // Baczki
+                        this.ctx.lineTo(headCenterX - 12, hairY);
+                    }
+                }
+                this.ctx.fill();
+
+                let eyeCenter = headCenterX + faceOffset;
+                this.ctx.fillStyle = '#212121';
+                if (isSideView) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(eyeCenter + (isFacingRight ? 2 : -2), headY + 1, 1.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                } else {
+                    this.ctx.beginPath(); this.ctx.arc(headCenterX - 3, headY + 1, 1.5, 0, Math.PI * 2); this.ctx.fill();
+                    this.ctx.beginPath(); this.ctx.arc(headCenterX + 3, headY + 1, 1.5, 0, Math.PI * 2); this.ctx.fill();
+                    this.ctx.fillStyle = '#d3a38e';
+                    this.ctx.fillRect(headCenterX - 2, headY + 6, 4, 1.5);
+                }
+
+
+                if (!visualIsBack) drawLeg(drawOrder[1]);
+                if (isSideView) { drawArm(drawOrder[1]); }
+                else { drawArm(true); drawArm(false); }
+            }
+
+            loop(t) {
+                let dt = Math.min((t - this.lastTime) / 1000, 0.1);
+                this.lastTime = t;
+                this.update(dt);
+                this.draw();
+                requestAnimationFrame(tm => this.loop(tm));
+            }
+        }
+
+        new Game();
+    </script>
+</body>
+
+</html>

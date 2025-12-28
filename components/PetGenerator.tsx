@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
@@ -14,38 +13,38 @@ const PET_TAGS = {
     },
     cyberpunk: {
         species: ['Dron', 'Robo-kot', 'Robo-pies', 'Hologram', 'Cyber-ptak'],
-        element: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny'],
+        element: ['Neonowy', 'Chromowy', 'Zglitchowany', 'Militarny'],
         size: ['Kieszonkowy', 'Kompaktowy', 'Standardowy']
     },
     pixelart: {
-        species: ['Slime', 'Szkielet', 'Kot', 'Ptak', 'Duszek'],
-        element: ['Ognisty', 'Lodowy', 'Magiczny', 'Latający'],
-        size: ['1-slot', '2-slot', '3-slot']
+        species: ['Duszek', 'Slime', 'Mały Smok', 'Sowa'],
+        element: ['Magiczny', 'Jasny', 'Retro', 'Złoty'],
+        size: ['8-bit', '16-bit', 'Mini']
     },
     gta: {
-        species: ['Chop (Rottweiler)', 'Małpka', 'Papuga', 'Robot-pies'],
-        element: ['Urban', 'Street', 'Pro'],
-        size: ['Obroża', 'Kamizelka', 'Tatuaż']
+        species: ['Rotweiler', 'Pudel', 'Małpka', 'Papuga'],
+        element: ['Obroża z kolcami', 'Złoty łańcuch', 'Ubranko', 'Okulary'],
+        size: ['Domowy', 'Bojowy', 'Kompaktowy']
     },
     fortnite: {
-        species: ['Plecak-pies', 'Robo-kot', 'Smok', 'Dinozaur', 'Kurczak'],
-        element: ['Stylized', 'Vibrant', 'Hologram'],
-        size: ['Rare', 'Epic', 'Mythic']
+        species: ['Llama', 'Kurczak', 'Wilczek', 'Żabka'],
+        element: ['Tęczowy', 'Mechaniczny', 'Neonowy', 'Epik'],
+        size: ['Toy-size', 'Small', 'Cute']
     },
     hades: {
-        species: ['Cerber (mały)', 'Duch', 'Cień', 'Swa', 'Żaba'],
-        element: ['Boski', 'Ognisty', 'Spectral'],
-        size: ['Hades', 'Olympic', 'Abyss']
+        species: ['Duchowiec', 'Mały Cerber', 'Wąż', 'Olimpijski Ptak'],
+        element: ['Ogień', 'Lód', 'Cień', 'Złoto'],
+        size: ['Boski', 'Standardowy', 'Esencja']
     },
     tibia: {
-        species: ['Baby Dragon', 'Lion Cub', 'Panda', 'Hedgehog', 'Bat'],
-        element: ['Charm', 'Tiny set'],
-        size: ['Oldschool', 'Sprite']
+        species: ['Panda', 'Bat', 'Bug', 'Cat'],
+        element: ['Classic', 'Magic', 'Tibian', 'Rare'],
+        size: ['Tiny', 'Small', 'Normal']
     },
     cuphead: {
-        species: ['Kubeczek', 'Piesek', 'Ptak', 'Duch', 'Maszynka'],
-        element: ['Rubber Hose', 'Watercolor'],
-        size: ['Friendly', 'Grumpy', 'Bouncing']
+        species: ['Ryba', 'Ptak', 'Filiżanka', 'Klaun'],
+        element: ['Vintage', 'Sepia', 'Inkwell', 'Grainy'],
+        size: ['Cartoonish', 'Retro', 'Small']
     }
 };
 
@@ -59,114 +58,139 @@ interface Result {
 
 export const PetGenerator: React.FC = () => {
     const { styleConfig, currentStyle } = useStyle();
-    const [prompt, setPrompt] = useState('');
-    const [loading, setLoading] = useState(false);
 
-    // Storage key per style
     const storageKey = `sanctuary_pets_${currentStyle}`;
     const settingsKey = `sanctuary_pets_settings_${currentStyle}`;
 
+    const [loading, setLoading] = useState(false);
+
+    const [prompt, setPrompt] = useState(() => {
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).prompt ?? '' : '';
+        } catch { return ''; }
+    });
+
     const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
-        const saved = localStorage.getItem(settingsKey);
-        if (!saved) return 'transparent';
-        const parsed = JSON.parse(saved);
-        if (parsed.bgMode) return parsed.bgMode;
-        return parsed.autoRemoveBg ? 'transparent' : 'green';
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            if (!saved) return 'transparent';
+            const parsed = JSON.parse(saved);
+            return parsed.bgMode ?? 'transparent';
+        } catch { return 'transparent'; }
     });
 
     const [bgTag, setBgTag] = useState(() => {
-        const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).bgTag ?? '' : '';
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).bgTag ?? '' : '';
+        } catch { return ''; }
     });
 
     const [model, setModel] = useState(() => {
-        const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
+        } catch { return 'free-pollinations'; }
     });
 
     const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
-        const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+        } catch { return {}; }
     });
 
-    const toggleTag = (category: string, value: string) => {
-        setSelectedTags(prev => ({
-            ...prev,
-            [category]: prev[category] === value ? '' : value
-        }));
-    };
-
-    // Load from local storage (per style)
     const [results, setResults] = useState<Result[]>(() => {
         const saved = localStorage.getItem(storageKey);
-        return saved ? JSON.parse(saved) : [];
+        try {
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
     });
 
-    // Save to local storage (per style)
+    const [error, setError] = useState<string | null>(null);
+
     React.useEffect(() => {
         localStorage.setItem(storageKey, JSON.stringify(results));
     }, [results, storageKey]);
 
-    // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, model, selectedTags }));
-    }, [bgMode, bgTag, model, selectedTags, settingsKey]);
+        localStorage.setItem(settingsKey, JSON.stringify({
+            bgMode,
+            bgTag,
+            model,
+            selectedTags,
+            prompt
+        }));
+    }, [bgMode, bgTag, model, selectedTags, prompt, settingsKey]);
 
-
-    // Reload when style changes
     React.useEffect(() => {
-        const saved = localStorage.getItem(storageKey);
-        setResults(saved ? JSON.parse(saved) : []);
-    }, [currentStyle]);
-
-    const getPetPrefix = () => {
-        if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 companion drone, small robot pet';
-        if (currentStyle === 'pixelart') return '16-bit pixel art companion sprite, retro game pet';
-        return 'Small companion pet for Diablo 4 character';
-    };
-
-    const getFullPrompt = () => {
-        const parts = [getPetPrefix()];
-        if (selectedTags.species) parts.push(selectedTags.species);
-        if (selectedTags.element) parts.push(selectedTags.element);
-        if (selectedTags.size) parts.push(selectedTags.size);
-        if (prompt) parts.push(prompt);
-
-        const baseText = parts.join(', ');
-        const fitInFrame = "wide shot, small creature, centered, entire subject COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE AND BELOW, generous padding around the subject, zoomed out significantly to ensure nothing is cut off";
-        const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
-        const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, cute creature, detailed fur, adorable expression";
-
-        if (bgMode === 'transparent') {
-            return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
-        } else if (bgMode === 'green') {
-            return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+        const savedResults = localStorage.getItem(storageKey);
+        try {
+            setResults(savedResults ? JSON.parse(savedResults) : []);
+        } catch {
+            setResults([]);
         }
 
-        const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
-        return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, ${fitInFrame}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
+        const savedSettings = localStorage.getItem(settingsKey);
+        if (savedSettings) {
+            try {
+                const parsed = JSON.parse(savedSettings);
+                setBgMode(parsed.bgMode || 'transparent');
+                setBgTag(parsed.bgTag || '');
+                setModel(parsed.model || 'free-pollinations');
+                setSelectedTags(parsed.selectedTags || {});
+                setPrompt(parsed.prompt || '');
+            } catch {
+                setBgMode('transparent');
+                setBgTag('');
+                setModel('free-pollinations');
+                setSelectedTags({});
+                setPrompt('');
+            }
+        } else {
+            setBgMode('transparent');
+            setBgTag('');
+            setModel('free-pollinations');
+            setSelectedTags({});
+            setPrompt('');
+        }
+    }, [currentStyle, storageKey, settingsKey]);
+
+    const getFullPrompt = () => {
+        const parts = [currentStyle === 'diablo' ? 'Small companion pet for Diablo 4' : 'small pet companion'];
+        Object.values(selectedTags).forEach(v => v && parts.push(v));
+        if (prompt) parts.push(prompt);
+
+        // Ulepszony prompt dla przezroczystości
+        const bgStr = bgMode === 'transparent' ? 'on pure white background, isolated subject, high contrast' :
+            bgMode === 'green' ? 'on neon green background #00FF00' :
+                (bgTag || 'themed background');
+
+        return `${parts.join(', ')}, centered, full body shot, masterpiece, best quality, 8k, ${bgStr}, no text, ${styleConfig.artStyle}, ${styleConfig.negative}`;
     };
 
-    const getPlaceholder = () => {
-        return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.pets.toLowerCase()}...`;
-    };
+    const handleGenerate = async () => {
+        if (!prompt && Object.keys(selectedTags).length === 0) return;
+        setLoading(true);
+        setError(null);
 
-    const getButtonText = () => {
-        return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.pets}`;
-    };
-
-    const processRemoveBg = async (imageUrl: string) => {
-        return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
-    };
-
-    const removeBg = async (id: string) => {
-        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
-        const item = results.find(r => r.id === id);
-        if (!item) return;
         try {
-            const newUrl = await processRemoveBg(item.url);
-            setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
-        } catch (e) { setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r)); }
+            const { url, modelUsed } = await generateAvatar(getFullPrompt(), model);
+            let finalUrl = url;
+            if (bgMode === 'transparent') finalUrl = await removeBackground(url, 'white');
+
+            setResults(prev => [{
+                id: Math.random().toString(),
+                url: finalUrl,
+                modelUsed,
+                originalUrl: url
+            }, ...prev]);
+        } catch (e) {
+            setError("Chowaniec nie usłuchał wezwania.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const modifyEdge = async (id: string, amount: number) => {
@@ -174,9 +198,8 @@ export const PetGenerator: React.FC = () => {
         const item = results.find(r => r.id === id);
         if (!item) return;
 
-        if (amount === -1) {
-            if (item.originalUrl) setResults(prev => prev.map(r => r.id === id ? { ...r, url: item.originalUrl!, isRemovingBg: false } : r));
-            else setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
+        if (amount === -1 && item.originalUrl) {
+            setResults(prev => prev.map(r => r.id === id ? { ...r, url: item.originalUrl!, isRemovingBg: false } : r));
             return;
         }
 
@@ -188,153 +211,135 @@ export const PetGenerator: React.FC = () => {
         }
     };
 
-    const makeToken = async (id: string) => {
-        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
-        const item = results.find(r => r.id === id);
-        if (!item) return;
-        try {
-            const newUrl = await createToken(item.url);
-            setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
-        } catch (e) {
-            setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
-        }
-    };
-
-    const handleGenerate = async () => {
-        if (!prompt) return;
-        setLoading(true);
-        const full = getFullPrompt();
-        try {
-            const { url, modelUsed } = await generateAvatar(full, model);
-            let finalUrl = url;
-            if (bgMode === 'transparent') {
-                try { finalUrl = await processRemoveBg(url); } catch (e) { }
-            }
-            setResults(prev => [{ id: Math.random().toString(), url: finalUrl, modelUsed, originalUrl: url }, ...prev]);
-        } catch (e) { console.error(e) } finally { setLoading(false) }
+    const toggleTag = (category: string, value: string) => {
+        setSelectedTags(prev => ({
+            ...prev,
+            [category]: prev[category] === value ? '' : value
+        }));
     };
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-in">
-            <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
-                <div className="flex justify-between items-center mb-4">
-                    <label className="font-diablo text-teal-900 text-[10px] uppercase block">Przywołanie Chowańca</label>
-                    <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
-                        {[
-                            { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
-                            { id: 'green', label: 'Zielone', color: 'green' },
-                            { id: 'themed', label: 'Tematyczne', color: 'amber' }
-                        ].map(mode => (
-                            <button
-                                key={mode.id}
-                                onClick={() => setBgMode(mode.id as any)}
-                                className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
-                                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
-                                    : 'text-stone-600 hover:text-stone-400'
-                                    }`}
-                            >
-                                {mode.label}
-                            </button>
-                        ))}
-                    </div>
-                    <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
-                        <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
-                        <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
-                    </select>
-                </div>
-
-                {bgMode === 'themed' && (
-                    <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
-                        <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
-                        <div className="flex flex-wrap gap-1.5">
-                            {styleConfig.backgroundTags.map(tag => (
+        <div className="max-w-6xl mx-auto space-y-12 animate-fade-in p-4 transition-colors duration-500">
+            {/* Panel Główny */}
+            <div className="premium-glass p-8 md:p-12 rounded-[3rem] space-y-10 relative">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <label className="text-stone-500 text-[12px] font-black uppercase tracking-[0.4em]">Opiekun Chowańców</label>
+                    <div className="flex flex-wrap justify-center gap-4 items-center">
+                        <div className="flex bg-black-40-themed border border-white/5 p-1 rounded-xl">
+                            {[
+                                { id: 'transparent', label: 'Czyste' },
+                                { id: 'green', label: 'Screen' },
+                                { id: 'themed', label: 'Scena' }
+                            ].map(mode => (
                                 <button
-                                    key={tag}
-                                    onClick={() => setBgTag(bgTag === tag ? '' : tag)}
-                                    className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
-                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
-                                        : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
-                                        }`}
+                                    key={mode.id}
+                                    onClick={() => setBgMode(mode.id as any)}
+                                    className={`relative px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${bgMode === mode.id ? 'bg-teal-900/40 text-teal-200' : 'text-stone-600 hover:text-stone-400'}`}
+                                    data-tooltip={mode.id === 'transparent' ? 'Automatyczne wycinanie tła' : mode.id === 'green' ? 'Towarzysz na zielonym tle' : 'Towarzysz w wybranym otoczeniu'}
                                 >
-                                    {tag}
+                                    {mode.label}
                                 </button>
                             ))}
                         </div>
+                        <div className="h-4 w-px bg-white/10 hidden md:block"></div>
+                        <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black-40-themed border border-white/5 text-stone-500 text-[10px] font-black p-2.5 rounded-xl outline-none cursor-pointer hover:text-stone-300 transition-colors">
+                            <option value="free-pollinations">MOC PUSTKI</option>
+                            <option value="gemini-2.5-flash-image">GEMINI FLASH</option>
+                        </select>
                     </div>
-                )}
+                </div>
 
-                <div className="space-y-4 mb-4">
-                    {Object.entries(PET_TAGS[currentStyle as keyof typeof PET_TAGS]).map(([category, values]) => (
-                        <div key={category}>
-                            <label className="text-stone-500 text-[9px] uppercase mb-1 block">
-                                {category === 'species' ? 'Gatunek' : category === 'element' ? 'Atrybut' : 'Rozmiar'}
+                {/* Tagi */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t border-white/5">
+                    {bgMode === 'themed' && (
+                        <div className="md:col-span-3 p-6 bg-teal-900/10 rounded-3xl border border-teal-900/20 shadow-inner">
+                            <label className="text-[10px] font-black text-teal-700 uppercase tracking-widest mb-4 block flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
+                                Pielesz Towarzysza
                             </label>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-2">
+                                {styleConfig.backgroundTags.map(tag => (
+                                    <button key={tag} onClick={() => setBgTag(bgTag === tag ? '' : tag)} className={`tag-button ${bgTag === tag ? 'active' : ''}`}>{tag}</button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(Object.entries(PET_TAGS[currentStyle as keyof typeof PET_TAGS] || PET_TAGS.diablo)).map(([category, values]) => (
+                        <div key={category} className="p-6 bg-black-40-themed rounded-[2rem] border border-white/5 space-y-4 hover:border-white/10 transition-all">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest">
+                                    {category === 'species' ? '🐾 Gatunek' : category === 'element' ? '✨ Atrybut' : '⚖️ Rozmiar'}
+                                </label>
+                                {selectedTags[category] && <span className="text-[8px] font-black text-teal-500 animate-pulse">WYBRANO</span>}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
                                 {values.map(val => (
-                                    <button
-                                        key={val}
-                                        onClick={() => toggleTag(category, val)}
-                                        className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
-                                            ? 'bg-teal-900/40 border-teal-600 text-teal-200'
-                                            : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
-                                            }`}
-                                    >
-                                        {val}
-                                    </button>
+                                    <button key={val} onClick={() => toggleTag(category, val)} className={`tag-button ${selectedTags[category] === val ? 'active' : ''}`}>{val}</button>
                                 ))}
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <input
-                    type="text"
-                    value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
-                    placeholder={getPlaceholder()}
-                    className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none focus:border-teal-900"
-                />
-                <div className="mb-4">
-                    <PromptDisplay label="Wezwanie" text={getFullPrompt()} colorClass="text-teal-900" />
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Wezwanie Towarzysza (Opis)</label>
+                    <textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Np. mały smok, niebieskie futro, urocze oczy..." className="custom-textarea" />
+                    <PromptDisplay label="Zapis Opiekuna" text={getFullPrompt()} colorClass="text-teal-900" />
                 </div>
-                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
+
+                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full !py-6 text-base !bg-teal-900/20 !border-teal-600/40 !text-teal-400">
+                    🐾 PRZYWOŁAJ TOWARZYSZA
+                </DiabloButton>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {results.map((res) => (
-                    <div key={res.id} className="relative group border border-teal-900/30 p-1 bg-black flex flex-col gap-1">
-                        <span className="absolute top-2 left-2 bg-black/60 text-[8px] text-stone-500 px-1 border border-teal-900/30 font-serif z-10">{res.modelUsed}</span>
-                        <div className="relative aspect-square border border-stone-800 overflow-hidden bg-black bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)]">
-                            <img src={res.url} className={`w-full h-full object-contain transition-opacity ${res.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
-                        </div>
 
-                        <div className="flex justify-between items-center bg-stone-900/50 p-1 border border-stone-800">
-                            <span className="text-[8px] text-stone-500 uppercase font-serif">Krawędź</span>
-                            <div className="flex gap-1">
-                                <button onClick={() => modifyEdge(res.id, 1)} className="bg-black text-amber-600 w-5 h-5 flex items-center justify-center text-[12px] border border-stone-700 hover:border-amber-600 disabled:opacity-50" disabled={res.isRemovingBg} title="Dotnij (Zmniejsz)">-</button>
-                                <button onClick={() => modifyEdge(res.id, -1)} className="bg-black text-emerald-600 w-5 h-5 flex items-center justify-center text-[12px] border border-stone-700 hover:border-emerald-600 disabled:opacity-50" disabled={res.isRemovingBg || !res.originalUrl} title="Cofnij (Reset)">↺</button>
-                            </div>
-                        </div>
+            {/* Wyniki */}
+            <div className="space-y-8">
+                <div className="flex items-center gap-4 text-[10px] font-black text-stone-700 uppercase tracking-[0.4em]">
+                    <div className="flex-1 h-px bg-white/5"></div>
+                    Adoptowani Przyjaciele
+                    <div className="flex-1 h-px bg-white/5"></div>
+                </div>
 
-                        <div className="flex gap-1 mt-1">
-                            <button onClick={() => removeBg(res.id)} className="flex-1 text-center bg-black text-teal-700 text-[8px] uppercase py-1 border border-teal-900/20 hover:text-white">Wytnij</button>
-                            <DiabloButton
-                                onClick={() => makeToken(res.id)}
-                                isLoading={res.isRemovingBg}
-                                className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
-                                title="Stwórz Token VTT"
-                            >
-                                Token
-                            </DiabloButton>
-                            <button
-                                onClick={() => downloadImage(res.url, `sanctuary_pet_${res.id}.png`)}
-                                className="flex-1 text-center bg-stone-900 text-teal-700 text-[8px] uppercase py-1 border border-teal-900/20 hover:text-white"
-                            >
-                                Adoptuj
-                            </button>
-                            <button onClick={() => setResults(prev => prev.filter((r) => r.id !== res.id))} className="text-red-900 hover:text-red-600 text-[9px] uppercase px-2 border border-red-900/20">X</button>
-                        </div>
+                {results.length === 0 ? (
+                    <div className="h-64 flex flex-col items-center justify-center opacity-10 border-2 border-dashed border-stone-800 rounded-[3rem]">
+                        <span className="text-6xl mb-4">🐾</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.5em]">Nikt nie czeka na adopcję</span>
                     </div>
-                ))}
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {results.map((res) => (
+                            <div key={res.id} className="result-card group">
+                                <div className="p-4 flex justify-between items-center bg-black-20-themed border-b border-white/5">
+                                    <span className="text-[10px] font-black text-teal-500 uppercase tracking-widest">Towarzysz</span>
+                                    <button onClick={() => setResults(prev => prev.filter(r => r.id !== res.id))} className="text-stone-600 hover:text-red-500 transition-colors" data-tooltip="Usuń towarzysza z listy">✕</button>
+                                </div>
+                                <div className="relative aspect-square checkerboard-grid m-6 rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl bg-black/40">
+                                    <img src={res.url} className={`w-full h-full object-contain p-6 transition-all duration-700 ${res.isRemovingBg ? 'scale-90 opacity-40 blur-md' : 'group-hover:scale-110'}`} alt="Generated pet" />
+                                    {res.isRemovingBg && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                            <div className="w-10 h-10 border-4 border-teal-500/10 border-t-teal-500 rounded-full animate-spin"></div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-6 pt-0 space-y-3">
+                                    <div className="flex items-center justify-between bg-black-40-themed rounded-xl p-2 border border-white/5">
+                                        <span className="text-[9px] font-black text-stone-600 uppercase ml-2 tracking-widest">Krawędzie</span>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => modifyEdge(res.id, 1)} className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 text-teal-500 hover:border-teal-500 transition-all font-black" data-tooltip="Zwężaj kontur (popraw wycięcie)">-</button>
+                                            <button onClick={() => modifyEdge(res.id, -1)} className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 text-emerald-500 hover:border-emerald-500 transition-all font-black text-[10px]" data-tooltip="Przywróć oryginał">↺</button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => downloadImage(res.url, `pet_${res.id}.png`)} className="col-span-2 py-3 rounded-xl bg-teal-600/10 border border-teal-600/20 text-[10px] font-black uppercase text-teal-400 hover:bg-teal-600/20 transition-all" data-tooltip="Zapisz chowańca na dysku">Pobierz PNG</button>
+                                        <button onClick={() => createToken(res.url).then(u => setResults(prev => prev.map(r => r.id === res.id ? { ...r, url: u } : r)))} className="py-2.5 rounded-xl bg-stone-900 border border-stone-800 text-[9px] font-black uppercase hover:bg-white/5 transition-all text-white/50" data-tooltip="Stwórz żeton VTT">Token</button>
+                                        <button onClick={() => removeBackground(res.url, 'white').then(u => setResults(prev => prev.map(r => r.id === res.id ? { ...r, url: u } : r)))} className="py-2.5 rounded-xl bg-stone-900 border border-stone-800 text-[9px] font-black uppercase hover:bg-white/5 transition-all text-white/50" data-tooltip="Ponów usuwanie tła">Wytnij</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

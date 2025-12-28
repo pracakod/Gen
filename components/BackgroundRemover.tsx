@@ -19,7 +19,6 @@ export const BackgroundRemover: React.FC = () => {
     const [replaceBg, setReplaceBg] = useState<string | null>(null);
     const [showGrid, setShowGrid] = useState(true);
 
-    // Zoom i przesuwanie podglądu
     const [viewZoom, setViewZoom] = useState(DEFAULTS.zoom);
     const [viewPanX, setViewPanX] = useState(DEFAULTS.panX);
     const [viewPanY, setViewPanY] = useState(DEFAULTS.panY);
@@ -30,7 +29,7 @@ export const BackgroundRemover: React.FC = () => {
 
     useEffect(() => {
         if (image && canvasRef.current) {
-            const ctx = canvasRef.current.getContext('2d');
+            const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
             if (ctx) {
                 const img = new Image();
                 img.onload = () => {
@@ -77,13 +76,13 @@ export const BackgroundRemover: React.FC = () => {
             newHistory.pop();
             const prev = newHistory[newHistory.length - 1];
             setHistory(newHistory);
-
             const img = new Image();
             img.onload = () => {
-                const ctx = canvasRef.current?.getContext('2d');
-                if (ctx) {
-                    ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-                    ctx.drawImage(img, 0, 0);
+                if (canvasRef.current) {
+                    canvasRef.current.width = img.width;
+                    canvasRef.current.height = img.height;
+                    const ctx = canvasRef.current.getContext('2d');
+                    ctx?.drawImage(img, 0, 0);
                 }
             };
             img.src = prev;
@@ -99,7 +98,7 @@ export const BackgroundRemover: React.FC = () => {
 
     const removeColor = (startX: number, startY: number) => {
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
         if (!canvas || !ctx) return;
 
         setLoading(true);
@@ -114,6 +113,12 @@ export const BackgroundRemover: React.FC = () => {
             const tr = data[targetIndex];
             const tg = data[targetIndex + 1];
             const tb = data[targetIndex + 2];
+            const ta = data[targetIndex + 3];
+
+            if (ta === 0) {
+                setLoading(false);
+                return;
+            }
 
             const threshold = tolerance * 2.5;
 
@@ -127,20 +132,17 @@ export const BackgroundRemover: React.FC = () => {
             } else {
                 const queue: [number, number][] = [[startX, startY]];
                 const visited = new Uint8Array(width * height);
-
-                const getIdx = (x: number, y: number) => (y * width + x) * 4;
                 const getVisIdx = (x: number, y: number) => y * width + x;
 
                 while (queue.length > 0) {
                     const [cx, cy] = queue.shift()!;
-                    const idx = getIdx(cx, cy);
+                    const idx = (cy * width + cx) * 4;
 
                     if (visited[getVisIdx(cx, cy)]) continue;
                     visited[getVisIdx(cx, cy)] = 1;
 
                     if (data[idx + 3] !== 0 && getColorDistance(data, idx, tr, tg, tb) < threshold) {
                         data[idx + 3] = 0;
-
                         if (cx > 0) queue.push([cx - 1, cy]);
                         if (cx < width - 1) queue.push([cx + 1, cy]);
                         if (cy > 0) queue.push([cx, cy - 1]);
@@ -150,23 +152,21 @@ export const BackgroundRemover: React.FC = () => {
             }
 
             ctx.putImageData(imageData, 0, 0);
-            const newState = canvas.toDataURL();
-            setHistory(prev => [...prev, newState]);
+            setHistory(prev => [...prev, canvas.toDataURL('image/png')]);
             setLoading(false);
         }, 10);
     };
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const scaleX = canvasRef.current.width / (rect.width / viewZoom);
-        const scaleY = canvasRef.current.height / (rect.height / viewZoom);
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const dx = e.clientX - rect.left;
+        const dy = e.clientY - rect.top;
+        const x = Math.floor(dx * (canvas.width / rect.width));
+        const y = Math.floor(dy * (canvas.height / rect.height));
 
-        // Poprawka na zoom i pan
-        const x = Math.floor(((e.clientX - rect.left) / viewZoom - viewPanX) * scaleX / viewZoom);
-        const y = Math.floor(((e.clientY - rect.top) / viewZoom - viewPanY) * scaleY / viewZoom);
-
-        if (x >= 0 && x < canvasRef.current.width && y >= 0 && y < canvasRef.current.height) {
+        if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
             removeColor(x, y);
         }
     };
@@ -175,17 +175,14 @@ export const BackgroundRemover: React.FC = () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         if (!canvas || !ctx) return;
-
         setLoading(true);
         setTimeout(() => {
             const width = canvas.width;
             const height = canvas.height;
-
             for (let iter = 0; iter < iterations; iter++) {
                 const imageData = ctx.getImageData(0, 0, width, height);
                 const data = imageData.data;
                 const oldData = new Uint8ClampedArray(data);
-
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
                         const idx = (y * width + x) * 4;
@@ -195,307 +192,223 @@ export const BackgroundRemover: React.FC = () => {
                             else if (x < width - 1 && oldData[idx + 4 + 3] === 0) isEdge = true;
                             else if (y > 0 && oldData[idx - width * 4 + 3] === 0) isEdge = true;
                             else if (y < height - 1 && oldData[idx + width * 4 + 3] === 0) isEdge = true;
+                            if (isEdge) data[idx + 3] = 0;
+                        }
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            }
+            setHistory(prev => [...prev, canvas.toDataURL('image/png')]);
+            setLoading(false);
+        }, 10);
+    };
 
-                            if (isEdge) {
-                                data[idx + 3] = 0;
+    const handleDilate = (iterations: number = 1) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+        setLoading(true);
+        setTimeout(() => {
+            const width = canvas.width;
+            const height = canvas.height;
+            for (let iter = 0; iter < iterations; iter++) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                const oldData = new Uint8ClampedArray(data);
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = (y * width + x) * 4;
+                        if (oldData[idx + 3] === 0) {
+                            let hasNeighbor = false;
+                            let nr = 0, ng = 0, nb = 0, count = 0;
+                            const neighbors = [
+                                [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+                            ];
+                            for (const [nx, ny] of neighbors) {
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nIdx = (ny * width + nx) * 4;
+                                    if (oldData[nIdx + 3] > 0) {
+                                        hasNeighbor = true;
+                                        nr += oldData[nIdx];
+                                        ng += oldData[nIdx + 1];
+                                        nb += oldData[nIdx + 2];
+                                        count++;
+                                    }
+                                }
+                            }
+                            if (hasNeighbor && count > 0) {
+                                data[idx] = Math.round(nr / count);
+                                data[idx + 1] = Math.round(ng / count);
+                                data[idx + 2] = Math.round(nb / count);
+                                data[idx + 3] = 255;
                             }
                         }
                     }
                 }
                 ctx.putImageData(imageData, 0, 0);
             }
-
-            const newState = canvas.toDataURL();
-            setHistory(prev => [...prev, newState]);
+            setHistory(prev => [...prev, canvas.toDataURL('image/png')]);
             setLoading(false);
         }, 10);
     };
 
-    const handleDilate = () => {
+    const downloadResult = () => {
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
-        if (!canvas || !ctx) return;
-
-        setLoading(true);
-        setTimeout(() => {
-            const width = canvas.width;
-            const height = canvas.height;
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-            const oldData = new Uint8ClampedArray(data);
-
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    const idx = (y * width + x) * 4;
-                    if (oldData[idx + 3] === 0) {
-                        let hasVisibleNeighbor = false;
-                        let avgR = 0, avgG = 0, avgB = 0, count = 0;
-
-                        const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-                        for (const [dx, dy] of neighbors) {
-                            const nx = x + dx;
-                            const ny = y + dy;
-                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                                const nIdx = (ny * width + nx) * 4;
-                                if (oldData[nIdx + 3] > 0) {
-                                    hasVisibleNeighbor = true;
-                                    avgR += oldData[nIdx];
-                                    avgG += oldData[nIdx + 1];
-                                    avgB += oldData[nIdx + 2];
-                                    count++;
-                                }
-                            }
-                        }
-
-                        if (hasVisibleNeighbor && count > 0) {
-                            data[idx] = Math.round(avgR / count);
-                            data[idx + 1] = Math.round(avgG / count);
-                            data[idx + 2] = Math.round(avgB / count);
-                            data[idx + 3] = 255;
-                        }
-                    }
-                }
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-            const newState = canvas.toDataURL();
-            setHistory(prev => [...prev, newState]);
-            setLoading(false);
-        }, 10);
+        if (!canvas) return;
+        const url = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = "no_background.png";
+        link.click();
     };
-
-    const ResetButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-        <button
-            onClick={onClick}
-            className="ml-2 px-2 py-0.5 text-[8px] bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white rounded transition-colors"
-            title="Resetuj"
-        >
-            ⟲
-        </button>
-    );
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-in">
-            <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
-                <div className="flex justify-between items-center mb-4">
-                    <label className="font-diablo text-green-500 text-[10px] uppercase">🧹 Usuwanie Tła</label>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleUndo}
-                            disabled={history.length <= 1}
-                            className="bg-black border border-stone-700 text-stone-400 px-3 py-1 text-[10px] uppercase hover:bg-stone-800 disabled:opacity-50"
-                        >
-                            ↩ Cofnij
-                        </button>
-                        <button
-                            onClick={() => { setImage(null); setHistory([]); setReplaceBg(null); }}
-                            className="bg-red-900/20 border border-red-900/50 text-red-500 px-3 py-1 text-[10px] uppercase hover:bg-red-900/40"
-                        >
-                            🗑 Wyczyść
-                        </button>
+        <div className="max-w-6xl mx-auto space-y-12 animate-fade-in p-4 text-stone-300">
+            <style>{`
+                .premium-glass {
+                    background: rgba(26, 28, 38, 0.45) !important;
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                }
+                .checkerboard-preview {
+                    background-image: linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 25%);
+                    background-size: 20px 20px;
+                }
+                .premium-slider {
+                    -webkit-appearance: none;
+                    background: rgba(255,255,255,0.05);
+                    height: 4px;
+                    border-radius: 2px;
+                    width: 100%;
+                }
+                .premium-slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 16px;
+                    height: 16px;
+                    background: #10b981;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+                }
+                .mode-button {
+                    flex: 1;
+                    padding: 12px;
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    border: 1px solid rgba(255,255,255,0.05);
+                    background: rgba(0,0,0,0.3);
+                    color: #555;
+                    transition: all 0.2s;
+                }
+                .mode-button.active {
+                    background: rgba(16, 185, 129, 0.2);
+                    border-color: #10b981;
+                    color: #fff;
+                }
+            `}</style>
+
+            {/* Panel Sterowania */}
+            <div className="premium-glass p-8 md:p-12 rounded-[3rem] space-y-10 relative">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <label className="text-stone-500 text-[12px] font-black uppercase tracking-[0.4em]">Magiczna Gumka (Usuwanie Tła)</label>
+                    <div className="flex gap-4">
+                        <button onClick={handleUndo} disabled={history.length <= 1} className="text-[10px] font-black uppercase text-emerald-500 disabled:opacity-30" data-tooltip="Cofnij ostatnią zmianę">Cofnij</button>
+                        <button onClick={() => { setImage(null); setHistory([]); setReplaceBg(null); }} className="text-[10px] font-black uppercase text-red-500" data-tooltip="Zacznij od nowa (czyści historię)">Reset</button>
                     </div>
                 </div>
 
-                {!image && (
-                    <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-stone-700 p-12 text-center cursor-pointer hover:border-green-500/50 transition-colors bg-black/50"
-                    >
-                        <p className="text-stone-500 text-xs font-serif">📷 Kliknij, aby wgrać obraz</p>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleUpload}
-                            className="hidden"
-                            ref={fileInputRef}
-                        />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6 border-t border-white/5">
+                    <div className="p-6 bg-black/30 rounded-[2rem] border border-white/5 space-y-6">
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-end">
+                                <label className="text-[9px] font-black text-stone-500 uppercase tracking-widest">Tolerancja</label>
+                                <span className="text-xs font-black text-emerald-500">{tolerance}</span>
+                            </div>
+                            <input type="range" min="1" max="100" value={tolerance} onChange={e => setTolerance(parseInt(e.target.value))} className="premium-slider" data-tooltip="Im wyższa, tym więcej podobnych kolorów zostanie usuniętych" />
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setMode('contiguous')} className={`mode-button ${mode === 'contiguous' ? 'active' : ''}`} data-tooltip="Usuwa tylko sąsiadujące piksele o podobnym kolorze">Różdżka</button>
+                            <button onClick={() => setMode('global')} className={`mode-button ${mode === 'global' ? 'active' : ''}`} data-tooltip="Usuwa dany kolor z całego obrazka">Globalny</button>
+                        </div>
                     </div>
-                )}
 
-                {image && (
-                    <div className="flex flex-col gap-4">
-                        {/* Panel narzędzi */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black p-4 border border-stone-800 rounded">
-                            {/* Tolerancja */}
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-stone-400 text-[10px] uppercase">Tolerancja: {tolerance}</span>
-                                    <ResetButton onClick={() => setTolerance(DEFAULTS.tolerance)} />
-                                </div>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="100"
-                                    value={tolerance}
-                                    onChange={(e) => setTolerance(parseInt(e.target.value))}
-                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            {/* Tryb */}
-                            <div>
-                                <span className="text-stone-400 text-[10px] uppercase block mb-1">Tryb usuwania</span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setMode('contiguous')}
-                                        className={`flex-1 px-2 py-1 text-[10px] uppercase border ${mode === 'contiguous' ? 'border-green-500 text-green-500 bg-green-900/20' : 'border-stone-700 text-stone-500'}`}
-                                    >
-                                        🪄 Różdżka
-                                    </button>
-                                    <button
-                                        onClick={() => setMode('global')}
-                                        className={`flex-1 px-2 py-1 text-[10px] uppercase border ${mode === 'global' ? 'border-blue-500 text-blue-500 bg-blue-900/20' : 'border-stone-700 text-stone-500'}`}
-                                    >
-                                        🌐 Globalny
-                                    </button>
-                                </div>
-                            </div>
+                    <div className="p-6 bg-black/30 rounded-[2rem] border border-white/5 space-y-4">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Dotnij Krawędzie</label>
+                        <div className="grid grid-cols-4 gap-2">
+                            <button onClick={() => handleErode(3)} className="py-2.5 rounded-xl border border-white/5 bg-black/20 text-[9px] font-black uppercase text-stone-400 hover:text-red-500 transition-all" data-tooltip="Usuwa 3 piksele z krawędzi (agresywne czyszczenie)">-3 px</button>
+                            <button onClick={() => handleErode(1)} className="py-2.5 rounded-xl border border-white/5 bg-black/20 text-[9px] font-black uppercase text-stone-400 hover:text-red-500 transition-all" data-tooltip="Usuwa 1 piksel z krawędzi (pozbywa się białych 'obwódek')">-1 px</button>
+                            <button onClick={() => handleDilate(1)} className="py-2.5 rounded-xl border border-white/5 bg-black/20 text-[9px] font-black uppercase text-stone-400 hover:text-emerald-500 transition-all" data-tooltip="Dodaje 1 piksel do krawędzi (rozszerza postać)">+1 px</button>
+                            <button onClick={() => handleDilate(3)} className="py-2.5 rounded-xl border border-white/5 bg-black/20 text-[9px] font-black uppercase text-stone-400 hover:text-emerald-500 transition-all" data-tooltip="Dodaje 3 piksele do krawędzi (mocne rozszerzenie)">+3 px</button>
                         </div>
+                    </div>
 
-                        {/* Zoom i przesuwanie */}
-                        <div className="grid grid-cols-3 gap-4 bg-black/50 p-3 border border-stone-800 rounded">
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-stone-400 text-[9px] uppercase">🔍 Zoom: {(viewZoom * 100).toFixed(0)}%</span>
-                                    <ResetButton onClick={() => setViewZoom(DEFAULTS.zoom)} />
-                                </div>
-                                <input
-                                    type="range" min="0.25" max="4" step="0.25"
-                                    value={viewZoom} onChange={e => setViewZoom(parseFloat(e.target.value))}
-                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-stone-400 text-[9px] uppercase">↔ Pozycja X: {viewPanX}px</span>
-                                    <ResetButton onClick={() => setViewPanX(DEFAULTS.panX)} />
-                                </div>
-                                <input
-                                    type="range" min="-500" max="500" step="10"
-                                    value={viewPanX} onChange={e => setViewPanX(parseInt(e.target.value))}
-                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-stone-400 text-[9px] uppercase">↕ Pozycja Y: {viewPanY}px</span>
-                                    <ResetButton onClick={() => setViewPanY(DEFAULTS.panY)} />
-                                </div>
-                                <input
-                                    type="range" min="-500" max="500" step="10"
-                                    value={viewPanY} onChange={e => setViewPanY(parseInt(e.target.value))}
-                                    className="w-full accent-green-600 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
+                    <div className="p-6 bg-black/30 rounded-[2rem] border border-white/5 space-y-4">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Podgląd Tła</label>
+                        <button onClick={() => bgInputRef.current?.click()} className="w-full py-3 rounded-xl border border-dashed border-white/10 text-[9px] font-black uppercase text-stone-500 hover:border-emerald-500/50 transition-all" data-tooltip="Wgraj obrazek, aby zobaczyć jak Twoja postać wygląda na nowym tle">🖼️ Podłóż Obraz</button>
+                        <input type="file" ref={bgInputRef} onChange={handleBgUpload} className="hidden" accept="image/*" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {!image ? (
+                        <div onClick={() => fileInputRef.current?.click()} className="h-32 border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group">
+                            <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" accept="image/*" />
+                            <span className="text-3xl mb-1 opacity-40 group-hover:scale-110 transition-transform">✂️</span>
+                            <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Wgraj obraz do wycięcia</span>
                         </div>
-
-                        {/* Narzędzia krawędzi */}
-                        <div className="flex flex-wrap gap-2 bg-black/50 p-3 border border-stone-800 rounded">
-                            <span className="text-stone-500 text-[10px] uppercase w-full mb-2">Narzędzia krawędzi:</span>
-                            <button
-                                onClick={() => handleErode(1)}
-                                disabled={loading}
-                                title="Usuwa 1 piksel z krawędzi widocznego obrazu (gdy usunąłeś za mało)"
-                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors disabled:opacity-50"
-                            >
-                                ➖ Zmniejsz (1px)
-                            </button>
-                            <button
-                                onClick={() => handleErode(3)}
-                                disabled={loading}
-                                title="Usuwa 3 piksele z krawędzi (agresywniejsze)"
-                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-amber-500 hover:bg-amber-900/20 transition-colors disabled:opacity-50"
-                            >
-                                ➖ Zmniejsz (3px)
-                            </button>
-                            <button
-                                onClick={handleDilate}
-                                disabled={loading}
-                                title="Rozszerza widoczne piksele o 1px (gdy usunąłeś za dużo)"
-                                className="px-3 py-1.5 text-[10px] uppercase border border-stone-700 text-cyan-500 hover:bg-cyan-900/20 transition-colors disabled:opacity-50"
-                            >
-                                ➕ Powiększ (1px)
-                            </button>
+                    ) : (
+                        <div className="p-6 bg-black/30 rounded-[2.5rem] border border-white/5 flex items-center gap-6">
+                            <div className="flex-1 space-y-2">
+                                <div className="flex justify-between text-[9px] font-black text-stone-600 uppercase"><span>Zoom Widoku</span><span>{(viewZoom * 100).toFixed(0)}%</span></div>
+                                <input type="range" min="0.2" max="4" step="0.1" value={viewZoom} onChange={e => setViewZoom(parseFloat(e.target.value))} className="premium-slider" data-tooltip="Zmień zbliżenie podglądu (użyteczne przy precyzyjnym klikaniu)" />
+                            </div>
+                            <DiabloButton onClick={downloadResult} className="!py-4 px-8 text-xs" data-tooltip="Pobierz gotowy obrazek z przezroczystością">EKSPORTUJ PNG</DiabloButton>
                         </div>
+                    )}
+                    <div className="flex items-center justify-center bg-black/30 rounded-[2.5rem] border border-white/5 px-8">
+                        <span className="text-[10px] font-black text-stone-600 uppercase tracking-widest text-center">🎯 Kliknij w kolor na podglądzie, aby go usunąć</span>
+                    </div>
+                </div>
+            </div>
 
-                        {/* Opcje wyświetlania */}
-                        <div className="flex items-center gap-4 bg-black/50 p-3 border border-stone-800 rounded">
-                            <label className="flex items-center gap-2 text-[10px] text-stone-400 uppercase cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={showGrid}
-                                    onChange={(e) => setShowGrid(e.target.checked)}
-                                    className="accent-green-500"
-                                />
-                                Siatka przezroczystości
-                            </label>
-                            <button
-                                onClick={() => bgInputRef.current?.click()}
-                                className="px-3 py-1 text-[10px] uppercase border border-stone-700 text-stone-400 hover:bg-stone-800"
-                            >
-                                🖼 Podłóż tło
-                            </button>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleBgUpload}
-                                className="hidden"
-                                ref={bgInputRef}
-                            />
-                            {replaceBg && (
-                                <button
-                                    onClick={() => setReplaceBg(null)}
-                                    className="px-2 py-1 text-[10px] text-red-400 hover:text-red-300"
-                                >
-                                    ✕ Usuń podłożone tło
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Canvas */}
+            {/* Podgląd */}
+            <div className="flex flex-col items-center gap-8">
+                <div className="relative group w-full max-w-4xl">
+                    <div className="absolute inset-0 bg-emerald-500/5 blur-[120px] rounded-full scale-110 opacity-30"></div>
+                    <div className="relative z-10 p-8 bg-[#1a1c26]/60 rounded-[3rem] border border-white/5 backdrop-blur-3xl shadow-2xl flex items-center justify-center min-h-[500px] overflow-hidden">
                         <div
-                            className="relative border border-stone-700 overflow-hidden flex justify-center items-center"
+                            className={`relative rounded-2xl overflow-hidden shadow-2xl ${showGrid && !replaceBg ? 'checkerboard-preview' : ''}`}
                             style={{
-                                background: showGrid && !replaceBg
-                                    ? 'repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 20px 20px'
-                                    : replaceBg
-                                        ? `url(${replaceBg}) center/cover`
-                                        : '#1a1a1a',
-                                minHeight: '400px'
+                                width: '100%',
+                                height: '500px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: replaceBg ? `url(${replaceBg}) center/cover` : (showGrid ? '' : '#000')
                             }}
                         >
                             <canvas
                                 ref={canvasRef}
                                 onClick={handleCanvasClick}
                                 style={{
-                                    transform: `scale(${viewZoom}) translate(${viewPanX}px, ${viewPanY}px)`,
-                                    transformOrigin: 'center center',
+                                    transform: `scale(${viewZoom})`,
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    cursor: loading ? 'wait' : 'crosshair'
                                 }}
-                                className={`max-w-full max-h-[60vh] ${loading ? 'cursor-wait' : 'cursor-crosshair'}`}
+                                className="transition-transform duration-200 drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
                             />
                             {loading && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                    <span className="text-green-500 font-diablo animate-pulse">Przetwarzanie...</span>
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                                    <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin"></div>
                                 </div>
                             )}
                         </div>
-
-                        <p className="text-center text-[10px] text-stone-500 uppercase">
-                            🎯 Kliknij na kolor, aby go usunąć ({mode === 'contiguous' ? 'Sąsiadujące piksele' : 'Wszystkie pasujące piksele'})
-                        </p>
-
-                        <div className="flex justify-center gap-4">
-                            <a
-                                href={history[history.length - 1]}
-                                download="obraz_bez_tla.png"
-                                className="border border-green-900 text-green-500 px-8 py-2 font-diablo text-xs uppercase hover:bg-green-900/20 transition-colors"
-                            >
-                                📥 Pobierz PNG
-                            </a>
-                        </div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

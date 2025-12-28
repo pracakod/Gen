@@ -15,17 +15,17 @@ const RARITY_COLORS: Record<Rarity, string> = {
     Custom: '#ffffff'
 };
 
-const SHAPES: { id: Shape; label: string }[] = [
-    { id: 'square', label: '◼ Kwadrat' },
-    { id: 'rounded-square', label: '▢ Zaokrąglony' },
-    { id: 'circle', label: '● Koło' },
-    { id: 'arch', label: '∩ Łuk' },
-    { id: 'diamond', label: '◆ Romb' },
-    { id: 'hexagon', label: '⬡ Heksagon' },
-    { id: 'octagon', label: '⯃ Oktagon' },
-    { id: 'shield', label: '🛡 Tarcza' },
-    { id: 'star', label: '★ Gwiazda' },
-    { id: 'heart', label: '♥ Serce' },
+const SHAPES: { id: Shape; label: string; icon: string }[] = [
+    { id: 'square', label: '◼ Kwadrat', icon: 'M 10 10 H 90 V 90 H 10 Z' },
+    { id: 'rounded-square', label: '▢ Zaokrąglony', icon: 'M 30 10 H 70 A 20 20 0 0 1 90 30 V 70 A 20 20 0 0 1 70 90 H 30 A 20 20 0 0 1 10 70 V 30 A 20 20 0 0 1 30 10' },
+    { id: 'circle', label: '● Koło', icon: 'M 50 10 A 40 40 0 1 1 50 90 A 40 40 0 1 1 50 10' },
+    { id: 'arch', label: '∩ Łuk', icon: 'M 10 90 V 40 A 40 40 0 0 1 90 40 V 90 Z' },
+    { id: 'diamond', label: '◆ Romb', icon: 'M 50 10 L 90 50 L 50 90 L 10 50 Z' },
+    { id: 'hexagon', label: '⬡ Heksagon', icon: 'M 50 10 L 85 30 L 85 70 L 50 90 L 15 70 L 15 30 Z' },
+    { id: 'octagon', label: '⯃ Oktagon', icon: 'M 35 10 H 65 L 90 35 V 65 L 65 90 H 35 L 10 65 V 35 Z' },
+    { id: 'shield', label: '🛡 Tarcza', icon: 'M 10 10 H 90 V 60 Q 50 100 10 60 Z' },
+    { id: 'star', label: '★ Gwiazda', icon: 'M 50 10 L 61 35 H 88 L 66 52 L 75 78 L 50 62 L 25 78 L 34 52 L 12 35 H 39 Z' },
+    { id: 'heart', label: '♥ Serce', icon: 'M 50 90 C 50 90 10 70 10 40 C 10 15 45 15 50 35 C 55 15 90 15 90 40 C 90 70 50 90 50 90' },
 ];
 
 const PRESET_BACKGROUNDS = [
@@ -35,7 +35,6 @@ const PRESET_BACKGROUNDS = [
     { id: 'grey', label: 'Szary', color: '#4a4a4a' },
     { id: 'blood', label: 'Krew', color: '#1a0505' },
     { id: 'ruby', label: 'Rubin', color: '#8b0000' },
-    { id: 'venom', label: 'Jad', color: '#051a05' },
     { id: 'emerald', label: 'Szmaragd', color: '#006400' },
     { id: 'sapphire', label: 'Szafir', color: '#00008b' },
     { id: 'amethyst', label: 'Ametyst', color: '#4b0082' },
@@ -49,9 +48,6 @@ const GRADIENT_PRESETS = [
     { id: 'gold', label: '✨ Złoto', colors: ['#ffd700', '#ff8c00', '#b8860b'] },
     { id: 'arcane', label: '💜 Arkana', colors: ['#ff00ff', '#8000ff', '#4000ff'] },
     { id: 'blood', label: '🩸 Krew', colors: ['#8b0000', '#4a0000', '#1a0000'] },
-    { id: 'holy', label: '☀️ Światło', colors: ['#ffffff', '#fffacd', '#ffd700'] },
-    { id: 'rainbow', label: '🌈 Tęcza', colors: ['#ff0000', '#ff8000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff'] },
-    { id: 'sunset', label: '🌅 Zachód', colors: ['#ff4500', '#ff6347', '#ffa500', '#ffd700'] },
 ];
 
 const DEFAULTS = {
@@ -300,253 +296,151 @@ export const IconMaker: React.FC = () => {
         }
     };
 
-    const ResetButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-        <button
-            onClick={onClick}
-            className="ml-2 px-2 py-0.5 text-[8px] bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white rounded transition-colors"
-            title="Resetuj"
-        >
-            ⟲
-        </button>
-    );
-
     return (
-        <div className="flex flex-col lg:flex-row gap-8 animate-fade-in max-w-6xl mx-auto">
-            {/* Panel kontroli */}
-            <div className="flex-1 bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl space-y-5 max-h-[80vh] overflow-y-auto">
-                <label className="font-diablo text-amber-600 text-[10px] uppercase mb-4 block border-b border-stone-800 pb-2">
-                    🎨 Konfiguracja Ikony
-                </label>
+        <div className="max-w-6xl mx-auto space-y-12 animate-fade-in p-4 text-stone-300">
+            <style>{`
+                .premium-glass {
+                    background: rgba(26, 28, 38, 0.45) !important;
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                }
+                .shape-button {
+                    aspect-ratio: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 12px;
+                    border: 1px solid rgba(255,255,255,0.05);
+                    background: rgba(0,0,0,0.3);
+                    color: #555;
+                    transition: all 0.2s;
+                }
+                .shape-button.active {
+                    background: rgba(124, 77, 255, 0.2);
+                    border-color: #7c4dff;
+                    color: #fff;
+                    box-shadow: 0 0 15px rgba(124, 77, 255, 0.2);
+                }
+                .checkerboard-preview {
+                    background-image: linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 25%);
+                    background-size: 20px 20px;
+                }
+                .premium-slider {
+                    -webkit-appearance: none;
+                    background: rgba(255,255,255,0.05);
+                    height: 4px;
+                    border-radius: 2px;
+                    width: 100%;
+                }
+                .premium-slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 16px;
+                    height: 16px;
+                    background: #7c4dff;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    box-shadow: 0 0 10px rgba(124, 77, 255, 0.5);
+                }
+            `}</style>
 
-                {/* Wgrywanie */}
-                <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border border-stone-700 bg-black/40 p-3 text-center cursor-pointer hover:border-amber-700 transition-colors"
-                >
-                    <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" accept="image/*" />
-                    <span className="text-stone-500 text-xs font-serif uppercase">
-                        {image ? '🔄 Zmień Obraz' : '📷 Wgraj Obraz'}
-                    </span>
-                </div>
-
-                {/* Styl ramki */}
-                <div>
-                    <span className="text-stone-500 text-[9px] uppercase font-serif mb-2 block">Styl Ramki</span>
-                    <div className="flex gap-2">
-                        <button onClick={() => setStyle('fantasy')} className={`flex-1 p-2 text-[10px] border uppercase ${style === 'fantasy' ? 'border-amber-600 bg-amber-900/20 text-amber-100' : 'border-stone-800 bg-black text-stone-500'}`}>
-                            ✨ Magiczny
-                        </button>
-                        <button onClick={() => setStyle('modern')} className={`flex-1 p-2 text-[10px] border uppercase ${style === 'modern' ? 'border-blue-500 bg-blue-900/20 text-blue-100' : 'border-stone-800 bg-black text-stone-500'}`}>
-                            ▫ Nowoczesny
-                        </button>
+            {/* Panel Sterowania */}
+            <div className="premium-glass p-8 md:p-12 rounded-[3rem] space-y-10 relative">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <label className="text-stone-500 text-[12px] font-black uppercase tracking-[0.4em]">Kreator Obramowań Ikon</label>
+                    <div className="flex gap-4">
+                        <button onClick={() => setStyle('fantasy')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${style === 'fantasy' ? 'border-amber-600/50 bg-amber-900/20 text-amber-500' : 'border-white/5 bg-black/40 text-stone-600'}`}>✨ FANTASY</button>
+                        <button onClick={() => setStyle('modern')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${style === 'modern' ? 'border-blue-500/50 bg-blue-900/20 text-blue-500' : 'border-white/5 bg-black/40 text-stone-600'}`}>▫ MODERN</button>
                     </div>
                 </div>
 
-                {/* Kształty */}
-                <div>
-                    <span className="text-stone-500 text-[9px] uppercase font-serif mb-2 block">Kształt</span>
-                    <div className="grid grid-cols-5 gap-1">
-                        {SHAPES.map(s => (
-                            <button
-                                key={s.id}
-                                onClick={() => setShape(s.id)}
-                                className={`p-2 text-[9px] border ${shape === s.id ? 'border-amber-600 bg-amber-900/20 text-amber-100' : 'border-stone-800 bg-black text-stone-500 hover:text-stone-300'}`}
-                                title={s.label}
-                            >
-                                {s.label.split(' ')[0]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Kolor ramki */}
-                <div>
-                    <span className="text-stone-500 text-[9px] uppercase font-serif mb-2 block">Kolor Ramki</span>
-                    <select
-                        value={rarity}
-                        onChange={(e) => setRarity(e.target.value as Rarity)}
-                        className="w-full bg-black border border-stone-800 p-2 text-stone-300 text-[10px] outline-none mb-2"
-                    >
-                        <option value="Common">Zwykły (Szary)</option>
-                        <option value="Magic">Magiczny (Niebieski)</option>
-                        <option value="Rare">Rzadki (Żółty)</option>
-                        <option value="Legendary">Legendarny (Pomarańczowy)</option>
-                        <option value="Unique">Unikalny (Złoty)</option>
-                        <option value="Custom">Własny kolor...</option>
-                    </select>
-                    {rarity === 'Custom' && (
-                        <input
-                            type="color"
-                            value={customFrameColor}
-                            onChange={e => setCustomFrameColor(e.target.value)}
-                            className="h-8 w-full border border-stone-700 cursor-pointer p-0 bg-transparent"
-                        />
-                    )}
-                </div>
-
-                {/* Grubość obrysu */}
-                <div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-stone-500 text-[9px] uppercase font-serif">Grubość Obrysu: {borderWidth}px</span>
-                        <ResetButton onClick={() => setBorderWidth(DEFAULTS.borderWidth)} />
-                    </div>
-                    <input
-                        type="range" min="1" max="30" step="1"
-                        value={borderWidth} onChange={e => setBorderWidth(parseInt(e.target.value))}
-                        className="w-full accent-amber-700 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer mt-1"
-                    />
-                </div>
-
-                {/* TŁO */}
-                <div className="border-t border-stone-800 pt-4">
-                    <span className="text-stone-500 text-[9px] uppercase font-serif mb-2 block">Tryb Tła</span>
-                    <div className="grid grid-cols-4 gap-1 mb-3">
-                        <button onClick={() => setBgMode('solid')} className={`p-2 text-[9px] border ${bgMode === 'solid' ? 'border-amber-600 bg-amber-900/20 text-amber-100' : 'border-stone-800 bg-black text-stone-500'}`}>
-                            Kolor
-                        </button>
-                        <button onClick={() => setBgMode('gradient')} className={`p-2 text-[9px] border ${bgMode === 'gradient' ? 'border-amber-600 bg-amber-900/20 text-amber-100' : 'border-stone-800 bg-black text-stone-500'}`}>
-                            Gradient
-                        </button>
-                        <button onClick={() => setBgMode('radial')} className={`p-2 text-[9px] border ${bgMode === 'radial' ? 'border-amber-600 bg-amber-900/20 text-amber-100' : 'border-stone-800 bg-black text-stone-500'}`}>
-                            Radialny
-                        </button>
-                        <button onClick={() => setBgMode('custom')} className={`p-2 text-[9px] border ${bgMode === 'custom' ? 'border-amber-600 bg-amber-900/20 text-amber-100' : 'border-stone-800 bg-black text-stone-500'}`}>
-                            Własny
-                        </button>
-                    </div>
-
-                    {bgMode === 'solid' && (
-                        <div className="grid grid-cols-6 gap-1">
-                            {PRESET_BACKGROUNDS.map(bg => (
-                                <button
-                                    key={bg.id}
-                                    onClick={() => setBgSolid(bg.id)}
-                                    className={`h-8 border relative ${bgSolid === bg.id ? 'border-white ring-2 ring-white/30' : 'border-stone-800'}`}
-                                    style={{ background: bg.id === 'transparent' ? 'repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50% / 10px 10px' : bg.color }}
-                                    title={bg.label}
-                                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6 border-t border-white/5">
+                    {/* Kształt */}
+                    <div className="p-6 bg-black/30 rounded-[2rem] border border-white/5 space-y-4">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Matryca Kształtu</label>
+                        <div className="grid grid-cols-5 gap-2">
+                            {SHAPES.map(s => (
+                                <button key={s.id} onClick={() => setShape(s.id)} className={`shape-button ${shape === s.id ? 'active' : ''}`}>
+                                    <svg viewBox="0 0 100 100" className="w-5 h-5 fill-current"><path d={s.icon} /></svg>
+                                </button>
                             ))}
-                            <button
-                                onClick={() => setBgSolid('custom')}
-                                className={`h-8 border flex items-center justify-center ${bgSolid === 'custom' ? 'border-white' : 'border-stone-800'}`}
-                                style={{ background: customBgColor }}
-                                title="Własny"
-                            >
-                                🎨
-                            </button>
                         </div>
-                    )}
+                    </div>
 
-                    {bgMode === 'solid' && bgSolid === 'custom' && (
-                        <input
-                            type="color"
-                            value={customBgColor}
-                            onChange={e => setCustomBgColor(e.target.value)}
-                            className="h-8 w-full border border-stone-700 cursor-pointer p-0 bg-transparent mt-2"
-                        />
-                    )}
+                    {/* Rzadkość */}
+                    <div className="p-6 bg-black/30 rounded-[2rem] border border-white/5 space-y-4">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Rzadkość & Grubość</label>
+                        <select value={rarity} onChange={(e) => setRarity(e.target.value as Rarity)} className="w-full bg-black/40 border border-white/5 text-stone-300 text-[10px] font-black p-3 rounded-xl outline-none">
+                            {Object.keys(RARITY_COLORS).map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <input type="range" min="1" max="40" value={borderWidth} onChange={e => setBorderWidth(parseInt(e.target.value))} className="premium-slider" />
+                    </div>
 
-                    {(bgMode === 'gradient' || bgMode === 'radial') && (
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-5 gap-1">
-                                {GRADIENT_PRESETS.map(g => (
-                                    <button
-                                        key={g.id}
-                                        onClick={() => setGradientPreset(g.id)}
-                                        className={`h-8 border text-[8px] ${gradientPreset === g.id ? 'border-white ring-2 ring-white/30' : 'border-stone-800'}`}
-                                        style={{ background: `linear-gradient(90deg, ${g.colors.join(', ')})` }}
-                                        title={g.label}
-                                    />
-                                ))}
-                            </div>
-                            {bgMode === 'gradient' && (
-                                <div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-stone-500 text-[9px]">Kąt: {gradientAngle}°</span>
-                                        <ResetButton onClick={() => setGradientAngle(DEFAULTS.gradientAngle)} />
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="360" step="15"
-                                        value={gradientAngle} onChange={e => setGradientAngle(parseInt(e.target.value))}
-                                        className="w-full accent-amber-700 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                    />
+                    {/* Tło */}
+                    <div className="p-6 bg-black/30 rounded-[2rem] border border-white/5 space-y-4">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Styl Tła</label>
+                        <div className="flex gap-2 mb-2">
+                            {['solid', 'gradient', 'radial'].map(mode => (
+                                <button key={mode} onClick={() => setBgMode(mode as any)} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase border transition-all ${bgMode === mode ? 'border-[#7c4dff] bg-[#7c4dff]/10 text-white' : 'border-white/5 text-stone-600'}`}>
+                                    {mode}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                            {bgMode === 'solid' ? PRESET_BACKGROUNDS.map(bg => (
+                                <button key={bg.id} onClick={() => setBgSolid(bg.id)} className={`h-6 rounded-lg border transition-all ${bgSolid === bg.id ? 'border-white' : 'border-white/5'}`} style={{ background: bg.color }} />
+                            )) : GRADIENT_PRESETS.map(g => (
+                                <button key={g.id} onClick={() => setGradientPreset(g.id)} className={`h-6 rounded-lg border transition-all ${gradientPreset === g.id ? 'border-white' : 'border-white/5'}`} style={{ background: `linear-gradient(90deg, ${g.colors.join(', ')})` }} />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Transformacje i Upload */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-6 bg-black/30 rounded-[2.5rem] border border-white/5 space-y-4">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Pozycjonowanie Obrazu</label>
+                        <div className="space-y-4">
+                            <div className="flex justify-between text-[9px] font-black text-stone-600 uppercase"><span>Zoom</span><span>{zoom.toFixed(2)}x</span></div>
+                            <input type="range" min="0.1" max="4" step="0.1" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="premium-slider" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <span className="text-[9px] font-black text-stone-600 uppercase">Oś X</span>
+                                    <input type="range" min="-300" max="300" value={panX} onChange={e => setPanX(parseFloat(e.target.value))} className="premium-slider" />
                                 </div>
-                            )}
-                        </div>
-                    )}
-
-                    {bgMode === 'custom' && (
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <span className="text-stone-500 text-[8px] block mb-1">Kolor 1</span>
-                                <input
-                                    type="color"
-                                    value={customGradientColor1}
-                                    onChange={e => setCustomGradientColor1(e.target.value)}
-                                    className="h-8 w-full border border-stone-700 cursor-pointer p-0 bg-transparent"
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <span className="text-stone-500 text-[8px] block mb-1">Kolor 2</span>
-                                <input
-                                    type="color"
-                                    value={customGradientColor2}
-                                    onChange={e => setCustomGradientColor2(e.target.value)}
-                                    className="h-8 w-full border border-stone-700 cursor-pointer p-0 bg-transparent"
-                                />
+                                <div className="space-y-2">
+                                    <span className="text-[9px] font-black text-stone-600 uppercase">Oś Y</span>
+                                    <input type="range" min="-300" max="300" value={panY} onChange={e => setPanY(parseFloat(e.target.value))} className="premium-slider" />
+                                </div>
                             </div>
                         </div>
-                    )}
-                </div>
-
-                {/* Transformacje */}
-                <div className="space-y-3 pt-4 border-t border-stone-800">
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-stone-500 text-[9px] uppercase font-serif">Skalowanie: {zoom.toFixed(1)}x</span>
-                            <ResetButton onClick={() => setZoom(DEFAULTS.zoom)} />
-                        </div>
-                        <input
-                            type="range" min="0.1" max="3" step="0.1"
-                            value={zoom} onChange={e => setZoom(parseFloat(e.target.value))}
-                            className="w-full accent-amber-700 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer mt-1"
-                        />
                     </div>
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-stone-500 text-[9px] uppercase font-serif">Pozycja X: {panX}px</span>
-                            <ResetButton onClick={() => setPanX(DEFAULTS.panX)} />
+                    <div className="flex flex-col gap-4">
+                        <div onClick={() => fileInputRef.current?.click()} className="flex-1 border-2 border-dashed border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:border-[#7c4dff]/30 hover:bg-[#7c4dff]/5 transition-all group">
+                            <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" accept="image/*" />
+                            <span className="text-3xl mb-2 opacity-40 group-hover:scale-110 transition-transform">🖼️</span>
+                            <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">WGRAJ OBRAZ</span>
                         </div>
-                        <input
-                            type="range" min="-250" max="250" step="1"
-                            value={panX} onChange={e => setPanX(parseFloat(e.target.value))}
-                            className="w-full accent-amber-700 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer mt-1"
-                        />
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-stone-500 text-[9px] uppercase font-serif">Pozycja Y: {panY}px</span>
-                            <ResetButton onClick={() => setPanY(DEFAULTS.panY)} />
-                        </div>
-                        <input
-                            type="range" min="-250" max="250" step="1"
-                            value={panY} onChange={e => setPanY(parseFloat(e.target.value))}
-                            className="w-full accent-amber-700 h-1 bg-stone-800 rounded-lg appearance-none cursor-pointer mt-1"
-                        />
+                        <DiabloButton onClick={downloadIcon} className="w-full !py-6 text-sm">📥 EKSPORTUJ IKONĘ</DiabloButton>
                     </div>
                 </div>
-
-                <DiabloButton onClick={downloadIcon} className="w-full">📥 Pobierz Ikonę</DiabloButton>
             </div>
 
             {/* Podgląd */}
-            <div className="flex-1 flex items-center justify-center bg-black/20 p-8 border border-stone-900 border-dashed">
-                <canvas
-                    ref={canvasRef}
-                    width={512}
-                    height={512}
-                    className="max-w-full h-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-stone-900 bg-[repeating-conic-gradient(#333_0%_25%,#222_0%_50%)_50%/20px_20px]"
-                />
+            <div className="flex flex-col items-center gap-8">
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-[#7c4dff]/5 blur-[120px] rounded-full scale-150 opacity-50"></div>
+                    <div className="relative z-10 p-12 bg-[#1a1c26]/60 rounded-[4rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
+                        <div className="checkerboard-preview p-2 rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl bg-black">
+                            <canvas ref={canvasRef} width={512} height={512} className="max-w-full h-auto drop-shadow-[0_20px_80px_rgba(0,0,0,0.9)]" />
+                        </div>
+                    </div>
+                </div>
+                <div className="text-[11px] font-black text-stone-700 uppercase tracking-[0.5em] flex items-center gap-6">
+                    <div className="w-16 h-[1px] bg-stone-900"></div>
+                    FINAL PREVIEW 512x512
+                    <div className="w-16 h-[1px] bg-stone-900"></div>
+                </div>
             </div>
         </div>
     );

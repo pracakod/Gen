@@ -1,42 +1,20 @@
 import React, { useState } from 'react';
-import { createToken, erodeImage, removeBackground, downloadImage } from '../services/imageProcessing';
-import { enhanceUserPrompt } from '../services/prompts';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
 import { PromptDisplay } from './PromptDisplay';
+import { removeBackground as processRemoveBg, erodeImage, createToken, downloadImage } from '../services/imageProcessing';
 import { useStyle } from '../contexts/StyleContext';
 
 const HERO_TAGS = {
   diablo: {
-    race: ['Człowiek', 'Nieumarły', 'Demon', 'Anioł', 'Upadły'],
-    class: ['Wojownik', 'Mag', 'Łucznik', 'Paladyn', 'Nekromanta', 'Druid'],
-    trait: ['Płonący', 'Mroźny', 'Złoty', 'Skażony', 'Eteryczny'],
-    render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt'],
+    race: ['Barbarzyńca', 'Nekromanta', 'Czarodziejka', 'Łotr', 'Druid', 'Anioł', 'Demon'],
+    class: ['Wojownik', 'Mag', 'Zabójca', 'Strażnik', 'Berserker'],
+    trait: ['Zniszczony', 'Mroczny', 'Epicki', 'Starożytny', 'Skażony'],
+    render: ['Concept Art', 'Blender 3D', 'Splash Art', 'ZBrush Sculpt', 'In-Game Tool', 'Cinematic'],
     pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   },
   cyberpunk: {
-    race: ['Człowiek', 'Cyborg', 'Android', 'Syntetyk', 'Haker'],
-    class: ['Netrunner', 'Solo', 'Techie', 'Fixer', 'Mercenary'],
-    trait: ['Neonowy', 'Chromowany', 'Zglitchowany', 'Militarny', 'Wirtualny'],
-    render: ['In-Game Tool', 'Blender 3D', 'Cinematic', 'Voxel'],
-    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
-  },
-  pixelart: {
-    race: ['Człowiek', 'Elf', 'Krasnolud', 'Ork', 'Szkielet'],
-    class: ['Rycerz', 'Czarodziej', 'Złodziej', 'Kapłan', 'Ranger'],
-    trait: ['8-bitowy', 'Legendarny', 'Ognisty', 'Leśny', 'Przeklęty'],
-    render: ['Sprite Sheet', 'Blender 3D', 'Retro Render', 'HD-2D'],
-    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
-  },
-  gta: {
-    race: ['Obywatel', 'Gangster', 'Biznesmen', 'Agent', 'Policjant'],
-    class: ['Street Racer', 'Hacker', 'Mogul', 'Bouncer', 'Smuggler'],
-    trait: ['Luksusowy', 'Złoty', 'Uzbrojony', 'Tatuaże', 'Pewny Siebie'],
-    render: ['Vector Art', 'GTA Style', 'Digital Paint', 'Illustration'],
-    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
-  },
-  fortnite: {
-    race: ['Bohater', 'Przybysz', 'Kosmita', 'Zabawka', 'Robot'],
+    race: ['Solo', 'Netrunner', 'Techie', 'Corporate', 'Nomad', 'Android', 'Cyborg'],
     class: ['Żołnierz', 'Ninja', 'Budowniczy', 'Specjalista', 'Legenda'],
     trait: ['Smerfny', 'Neonowy', 'Epicki', 'Zabawny', 'Technologiczny'],
     render: ['UE5 Render', 'Stylized 3D', 'Vibrant Art', 'In-Game Skin'],
@@ -62,7 +40,143 @@ const HERO_TAGS = {
     trait: ['Retro Film', 'Gumowe Ręce', 'Akvarelowy', 'Surrealistyczny', 'Wesoły'],
     render: ['Cel Animation', '1930s Drawing', 'Vintage Art', 'Hand-drawn'],
     pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
+  },
+  pixelart: {
+    race: ['Bohater', 'Mag', 'Łucznik', 'Rycerz', 'Dwarf', 'Elf', 'Orc'],
+    class: ['Warrior', 'Mage', 'Ranger', 'Paladin'],
+    trait: ['Retro', 'Pikselowy', 'Złoty', 'Mityczny'],
+    render: ['Sprite', 'Isometric Art', 'Top-Down Retro', 'Bitmap'],
+    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
+  },
+  gta: {
+    race: ['Gangster', 'Boss', 'Dealer', 'Agent', 'Uliczny Wojownik'],
+    class: ['Solo', 'Crew Member', 'Hustler', 'Legend'],
+    trait: ['Pieniądze', 'Złoto', 'Tatuaże', 'Okulary', 'Luksus'],
+    render: ['GTA Style', 'Vector Art', 'Digital Paint', 'Illustration'],
+    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
+  },
+  fortnite: {
+    race: ['Skin', 'Hero', 'Commander', 'Raider', 'Outlander'],
+    class: ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'],
+    trait: ['Vibrant', 'Neon', 'Cartoon', 'Heroic', 'Glitch'],
+    render: ['UE5 Render', 'Stylized 3D', 'Vibrant Art', 'In-Game Skin'],
+    pose: ['Neutralna', 'Bojowa', 'Power Stance', 'Portret', 'Popiersie', 'A-Pose', 'T-Pose', 'Z Profilu', 'Z tyłu', 'W biegu', 'Atak mieczem', 'Rzucanie czaru', 'Siedząca', 'Kucająca', 'Medytacja']
   }
+};
+
+const RENDER_DESCRIPTIONS: Record<string, string> = {
+  'Concept Art': 'Szkicowy, artystyczny styl projektowy z widocznymi pociągnięciami pędzla.',
+  'Blender 3D': 'Realistyczny model 3D o wysokiej jakości z teksturami PBR i profesjonalnym oświetleniem.',
+  'Splash Art': 'Dynamiczna, epicka ilustracja o kinowej jakości, jak w profesjonalnych grach RPG.',
+  'ZBrush Sculpt': 'Szczegółowa rzeźba cyfrowa z wyraźną anatomią i drobnymi detalami materiałów.',
+  'In-Game Tool': 'Wygląd bezpośrednio z edytora gry, pokazujący bohatera w środowisku silnika graficznego.',
+  'Cinematic': 'Najwyższa filmowa jakość obrazu z precyzyjnym oświetleniem i głębią ostrości.',
+  'Voxel': 'Styl zbudowany z małych sześcianów, przypominający Minecrafta lub nowoczesne gry voxelowe.',
+  'Sprite Sheet': 'Arkusz klatek animacji postaci gotowy do wycięcia i użycia w silniku 2D.',
+  'Retro Render': 'Stylizowany render przypominający grafikę z wczesnych lat 2000.',
+  'HD-2D': 'Połączenie nowoczesnych efektów świetlnych i 3D z klasycznym pixel artem.',
+  'Vector Art': 'Czyste linie i płaskie kolory typowe dla ilustracji wektorowych i logo.',
+  'GTA Style': 'Stylistyka plakatów i artworków znana z gier Rockstar Games.',
+  'Digital Paint': 'Ilustracja cyfrowa imitująca tradycyjne malarstwo olejne lub akrylowe.',
+  'Illustration': 'Klasyczny styl rysunkowy z wyraźnym konturem i cieniowaniem.',
+  'UE5 Render': 'Bardzo nowoczesny wygląd wykorzystujący technologie Nanite i Lumen z Unreal Engine 5.',
+  'Stylized 3D': 'Uproszczony, kreskówkowy styl 3D z żywymi kolorami i miękkim cieniowaniem.',
+  'Vibrant Art': 'Sztuka o nasyconych kolorach i wysokim kontraście wizualnym.',
+  'In-Game Skin': 'Prezentacja bohatera jako przedmiotu modyfikującego wygląd w grze.',
+  'Painterly': 'Styl artystyczny skupiony na teksturze pędzla i artystycznym nieładzie.',
+  'Brush Strokes': 'Eksperymentalny styl z wyraźnie zaznaczonymi śladami narzędzi malarskich.',
+  'Hades Style': 'Unikalna stylistyka z gry Hades: czarne kontury, mocny kontrast i boski blask.',
+  'High Contrast': 'Obraz o bardzo mocnych cieniach i jasnych światłach, bez półtonów.',
+  'Sprite': 'Pojedynczy obrazek postaci 2D typowy dla gier izometrycznych i platformówek.',
+  'Isometric Art': 'Widok z rzutu izometrycznego, najpopularniejszy w klasycznych RPG.',
+  'Top-Down Retro': 'Klasyczny widok z góry w stylu retro, z wyraźną siatką pikseli i ograniczoną paletą barw.',
+  'Bitmap': 'Surowy, nostalgiczny styl cyfrowy przypominający czasy Commodore lub Amigi.',
+  'Cel Animation': 'Styl tradycyjnej animacji rysunkowej z lat 90.',
+  '1930s Drawing': 'Styl starych kreskówek z lat 30. (jak wczesny Disney lub Cuphead).',
+  'Vintage Art': 'Obraz stylizowany na stary, pożółkły papier lub zużytą kliszę filmową.',
+  'Hand-drawn': 'Styl imitujący rysunek odręczny wykonany ołówkiem lub tuszem.'
+};
+
+const BG_MODE_DESCRIPTIONS: Record<string, string> = {
+  'transparent': 'Usuwa tło, pozostawiając samą postać na przezroczystości.',
+  'green': 'Postać na jednolitym zielonym tle do późniejszej obróbki.',
+  'themed': 'Postać w wybranym otoczeniu dla pełnego klimatu.'
+};
+
+const POSE_DESCRIPTIONS: Record<string, string> = {
+  'Neutralna': 'Swobodna, naturalna postawa postaci stojącej przodem.',
+  'Bojowa': 'Dynamiczna poza gotowości do walki.',
+  'Power Stance': 'Potężna postawa emanująca siłą.',
+  'Portret': 'Kadrowanie od pasa w górę, skupione na twarzy.',
+  'Popiersie': 'Bliskie ujęcie samej głowy i ramion.',
+  'A-Pose': 'Klasyczna poza projektowa w kształcie litery A.',
+  'T-Pose': 'Ramiona rozłożone poziomo, poza techniczna.',
+  'Z Profilu': 'Postać zwrócona bokiem do widza.',
+  'Z tyłu': 'Widok na plecy bohatera.',
+  'W biegu': 'Dynamiczne ujęcie w trakcie ruchu.',
+  'Atak mieczem': 'Akcja zamachu bronią białą.',
+  'Rzucanie czaru': 'Mistyczna poza z energią magiczną.',
+  'Siedząca': 'Postać odpoczywająca na ziemi.',
+  'Kucająca': 'Niska poza, skradanie się.',
+  'Medytacja': 'Postać w locie lub siedząca w spokoju.'
+};
+
+const RACE_DESCRIPTIONS: Record<string, string> = {
+  'Barbarzyńca': 'Silny wojownik z północy, specjalista od walki w zwarciu.',
+  'Nekromanta': 'Władca śmierci, przywołujący sługi zza grobu.',
+  'Czarodziejka': 'Mistrzyni żywiołów, władająca ogniem i lodem.',
+  'Łotr': 'Szybki i przebiegły mistrz kamuflażu oraz sztyletów.',
+  'Druid': 'Zmiennokształtny opiekun natury, władający mocą ziemi.',
+  'Anioł': 'Boska istota o nieskazitelnej aurze i potężnych skrzydłach.',
+  'Demon': 'Mroczny byt z otchłani, emanujący niszczycielską energią.',
+  'Solo': 'Najemnik nowej ery, skupiony na brutalnej sile i technologii.',
+  'Netrunner': 'Geniusz sieci, potrafiący włamać się do każdego systemu.',
+  'Techie': 'Mistrz urządzeń i modyfikacji sprzętowych.',
+  'Corporate': 'Wysoko postawiony agent korporacji, zawsze nienagannie ubrany.',
+  'Nomad': 'Wędrowiec bezdroży, wolny duch i doskonały kierowca.',
+  'Android': 'Sztuczna inteligencja w ludzkim ciele.',
+  'Cyborg': 'Połączenie człowieka z zaawansowaną maszynerią.',
+  'Bóstwo': 'Istota o boskiej mocy pochodząca z Olimpu.',
+  'Duch': 'Eteryczny byt błąkający się po krainie cieni.',
+  'Potępieniec': 'Dusza skazana na wieczne potępienie w podziemiach.',
+  'Cierń': 'Agresywna flora lub fauna o kolczastym wyglądzie.',
+  'Nimfa': 'Piękna i niebezpieczna istota związana z wodą lub lasem.',
+  'Człowiek': 'Najliczniejsza rasa, wszechstronna i ambitna.',
+  'Ork': 'Silna i brutalna rasa wojowników o zielonej skórze.',
+  'Minotaur': 'Pół-człowiek, pół-byk, o ogromnej sile fizycznej.',
+  'Dwarf': 'Wytrzymały krasnolud, doskonały rzemieślnik i górnik.',
+  'Elf': 'Długowieczna istota o smukłej sylwetce i magicznych zdolnościach.',
+  'Przedmiot': 'Ożywiony obiekt o magicznych właściwościach.',
+  'Zwierzak': 'Zwierzęcy bohater o ludzkich cechach.',
+  'Postać ludzka': 'Klasyczny bohater w kreskówkowym wydaniu.',
+  'Stwór': 'Fantastyczna bestia o unikalnej fizjologii.',
+  'Kreskówka': 'Bohater o silnie przerysowanych i dynamicznych kształtach.'
+};
+
+const CLASS_DESCRIPTIONS: Record<string, string> = {
+  'Wojownik': 'Podstawowa klasa skupiona na walce i obronie.',
+  'Mag': 'Użytkownik zakazanej wiedzy i potężnych zaklęć.',
+  'Zabójca': 'Specjalista od eliminacji celów z zaskoczenia.',
+  'Strażnik': 'Nieustępliwy obrońca, mur nie do przebicia.',
+  'Berserker': 'Wojownik wpadający w szał bojowy, ignorujący ból.',
+  'Żołnierz': 'Zdyscyplinowany profesjonalista z nowoczesnym arsenałem.',
+  'Ninja': 'Cichy zabójca z przyszłości, mistrz katan.',
+  'Budowniczy': 'Inżynier tworzący fortyfikacje i maszyny.',
+  'Specjalista': 'Ekspert w wąskiej dziedzinie technologicznej.',
+  'Legenda': 'Postać o statusie mitycznym, budząca powszechny szacunek.',
+  'Posłaniec': 'Szybka postać dostarczająca wieści między sferami.',
+  'Buntownik': 'Walczący przeciwko narzuconemu porządkowi.',
+  'Wyrocznia': 'Osoba widząca przyszłość i przeznaczenie.',
+  'Knight': 'Szlachetny rycerz o potężnym pancerzu.',
+  'Paladin': 'Święty wojownik łączący siłę z magią światła.',
+  'Sorcerer': 'Czarownik czerpiący moc bezpośrednio z otchłani.',
+  'Druid (Tibia)': 'Mistrz natury i uzdrawiania w świecie Tibii.',
+  'Elite Knight': 'Najpotężniejsza forma rycerza, lider na polu bitwy.',
+  'Awanturnik': 'Bohater szukający guza w każdym zakamarku.',
+  'Boss': 'Potężny przeciwnik o unikalnych umiejętnościach.',
+  'Sidekick': 'Pomocnik głównego bohatera, zawsze wierny i gotowy.',
+  'Bohater (Cuphead)': 'Klasyczna pozytywna postać z animacji.',
+  'Kanciarz': 'Postać o śliskim charakterze, zawsze spadająca na cztery łapy.'
 };
 
 interface Result {
@@ -74,65 +188,114 @@ interface Result {
   originalPrompt: string;
   fullFinalPrompt: string;
   modelUsed?: string;
-  originalUrl?: string; // For Undo
+  originalUrl?: string;
 }
 
 export const AvatarGenerator: React.FC = () => {
   const { styleConfig, currentStyle } = useStyle();
-  const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState('free-pollinations');
-  const [loading, setLoading] = useState(false);
 
-  // Storage key per style
   const storageKey = `sanctuary_avatars_${currentStyle}`;
   const settingsKey = `sanctuary_avatars_settings_${currentStyle}`;
 
-  // Load from local storage (per style)
+  const [prompt, setPrompt] = useState(() => {
+    try {
+      const saved = localStorage.getItem(settingsKey);
+      return saved ? JSON.parse(saved).prompt || '' : '';
+    } catch { return ''; }
+  });
+
+  const [loading, setLoading] = useState(false);
+
   const [results, setResults] = useState<Result[]>(() => {
-    const saved = localStorage.getItem(storageKey);
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
 
-  const [error, setError] = useState<string | null>(null);
-
-  // Load settings from localStorage
   const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
-    const saved = localStorage.getItem(settingsKey);
-    if (!saved) return 'transparent';
-    const parsed = JSON.parse(saved);
-    if (parsed.bgMode) return parsed.bgMode;
-    return parsed.autoRemoveBg ? 'transparent' : 'green';
-  });
-
-  const [genMale, setGenMale] = useState(() => {
-    const saved = localStorage.getItem(settingsKey);
-    return saved ? JSON.parse(saved).genMale ?? true : true;
-  });
-
-  const [genFemale, setGenFemale] = useState(() => {
-    const saved = localStorage.getItem(settingsKey);
-    return saved ? JSON.parse(saved).genFemale ?? true : true;
+    try {
+      const saved = localStorage.getItem(settingsKey);
+      if (!saved) return 'transparent';
+      return JSON.parse(saved).bgMode || 'transparent';
+    } catch { return 'transparent'; }
   });
 
   const [bgTag, setBgTag] = useState(() => {
-    const saved = localStorage.getItem(settingsKey);
-    return saved ? JSON.parse(saved).bgTag ?? '' : '';
+    try {
+      const saved = localStorage.getItem(settingsKey);
+      if (!saved) return '';
+      return JSON.parse(saved).bgTag || '';
+    } catch { return ''; }
   });
 
-  // Save results to local storage (per style)
+  const [model, setModel] = useState(() => {
+    try {
+      const saved = localStorage.getItem(settingsKey);
+      if (!saved) return 'free-pollinations';
+      return JSON.parse(saved).model || 'free-pollinations';
+    } catch { return 'free-pollinations'; }
+  });
+
+  const [genMale, setGenMale] = useState(true);
+  const [genFemale, setGenFemale] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(settingsKey);
+      if (!saved) return {};
+      return JSON.parse(saved).selectedTags || {};
+    } catch { return {}; }
+  });
+
   React.useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(results));
   }, [results, storageKey]);
 
-  const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem(settingsKey);
-    return saved ? JSON.parse(saved).selectedTags ?? {} : {};
-  });
-
-  // Save settings to local storage
   React.useEffect(() => {
-    localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, genMale, genFemale, model, selectedTags }));
-  }, [bgMode, bgTag, genMale, genFemale, model, selectedTags, settingsKey]);
+    localStorage.setItem(settingsKey, JSON.stringify({
+      bgMode,
+      bgTag,
+      model,
+      selectedTags,
+      prompt // Teraz prompt jest zapisywany
+    }));
+  }, [bgMode, bgTag, model, selectedTags, prompt, settingsKey]);
+
+  // Efekt synchronizacji przy zmianie stylu
+  React.useEffect(() => {
+    const savedResults = localStorage.getItem(storageKey);
+    try {
+      setResults(savedResults ? JSON.parse(savedResults) : []);
+    } catch {
+      setResults([]);
+    }
+
+    const savedSettings = localStorage.getItem(settingsKey);
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setBgMode(parsed.bgMode || 'transparent');
+        setBgTag(parsed.bgTag || '');
+        setModel(parsed.model || 'free-pollinations');
+        setSelectedTags(parsed.selectedTags || {});
+        setPrompt(parsed.prompt || '');
+      } catch {
+        setBgMode('transparent');
+        setBgTag('');
+        setModel('free-pollinations');
+        setSelectedTags({});
+        setPrompt('');
+      }
+    } else {
+      setBgMode('transparent');
+      setBgTag('');
+      setModel('free-pollinations');
+      setSelectedTags({});
+      setPrompt('');
+    }
+  }, [currentStyle, storageKey, settingsKey]);
 
   const toggleTag = (category: string, value: string) => {
     setSelectedTags(prev => ({
@@ -141,137 +304,37 @@ export const AvatarGenerator: React.FC = () => {
     }));
   };
 
-  // Reload data when style changes
-  React.useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    setResults(saved ? JSON.parse(saved) : []);
-  }, [currentStyle]);
-
-  const getFullPromptForGender = (gender: 'Male' | 'Female') => {
-    const parts = [];
-    if (selectedTags.race) parts.push(selectedTags.race);
-    if (selectedTags.class) parts.push(selectedTags.class);
-    if (selectedTags.trait) parts.push(selectedTags.trait);
-
-    let renderStyle = styleConfig.artStyle;
-    if (selectedTags.render === 'Blender 3D') {
-      renderStyle = "3D character model rendered in Blender, Octane Render, Cycles engine, high poly, highly detailed PBR textures, game character preview, professional studio lighting, clear silhouette";
-    } else if (selectedTags.render) {
-      parts.push(selectedTags.render);
-    }
-
-    let poseDesc = "heroic standing pose";
-    if (selectedTags.pose === 'Bojowa') poseDesc = "dynamic action battle pose, ready for combat";
-    if (selectedTags.pose === 'A-Pose') poseDesc = "A-pose stance, arms slightly away from sides";
-    if (selectedTags.pose === 'T-Pose') poseDesc = "T-pose stance, arms strictly horizontal at sides";
-    if (selectedTags.pose === 'Z Profilu') poseDesc = "side profile view, standing sideways";
-    if (selectedTags.pose === 'Z tyłu') poseDesc = "back view, facing away from camera";
-    if (selectedTags.pose === 'W biegu') poseDesc = "dynamic running pose, mid-stride";
-    if (selectedTags.pose === 'Atak mieczem') poseDesc = "dynamic sword swinging attack pose";
-    if (selectedTags.pose === 'Rzucanie czaru') poseDesc = "spellcasting pose, magic energy in hands";
-    if (selectedTags.pose === 'Siedząca') poseDesc = "sitting down pose";
-    if (selectedTags.pose === 'Kucająca') poseDesc = "crouching low pose";
-    if (selectedTags.pose === 'Medytacja') poseDesc = "meditating pose, floating slightly or sitting lotus";
-    if (selectedTags.pose === 'Power Stance') poseDesc = "powerful heroic power stance, legs wide, looking intimidating";
-    if (selectedTags.pose === 'Portret') poseDesc = "portrait view, upper body and head, looking at camera";
-    if (selectedTags.pose === 'Popiersie') poseDesc = "bust view, head and shoulders only, detailed face";
-    if (selectedTags.pose === 'Neutralna') poseDesc = "relaxed standing pose, arms at sides";
-
+  const getFullPrompt = (gender: string) => {
+    const parts = [gender];
+    Object.values(selectedTags).forEach(v => v && parts.push(v));
     if (prompt) parts.push(prompt);
 
-    const baseText = parts.length > 0 ? parts.join(', ') : '[opis]';
-    const enhancedUserText = enhanceUserPrompt(baseText, 'character');
+    const bgStr = bgMode === 'transparent' ? 'transparent background, isolated subject' :
+      bgMode === 'green' ? 'on neon green background #00FF00' :
+        (bgTag || 'themed background');
 
-    let fitInFrame = `extremely wide full body shot, ${poseDesc}, entire character COMPLETELY INSIDE the frame with LOTS OF SPACE around it, CLEAR SPACE ABOVE THE HEAD AND BELOW THE FEET, generous padding of at least 15% from all image edges, zoomed out view, centered composition, ensure nothing is cut off`;
-    if (selectedTags.pose === 'Portret' || selectedTags.pose === 'Popiersie') {
-      fitInFrame = `medium shot, ${poseDesc}, centered in middle of frame, CLEAR WHITE SPACE ABOVE HEAD, framed properly with protective padding at the top and sides, high detail, no cropping`;
-    }
-    const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between character and background";
-    const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, photorealistic, hyperrealistic, sharp focus, perfect anatomy, beautiful face, detailed eyes, detailed skin texture";
-
-    if (bgMode === 'transparent') {
-      return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
-    } else if (bgMode === 'green') {
-      return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, NO GREEN CLOTHING, ${styleConfig.negative}`;
-    }
-
-    const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
-    return `${qualityBoost}, ${enhancedUserText}, ${renderStyle}, gender ${gender}, ${fitInFrame}, ${cleanEdges}, looking at camera, ${styleConfig.lighting}, ${bgDesc}, NO TEXT, ${styleConfig.negative}`;
+    return `${parts.join(', ')}, centered, full body shot, masterpiece, best quality, 8k, ${bgStr}, no text, ${styleConfig.artStyle}, ${styleConfig.negative}`;
   };
-
-  const getPlaceholder = () => {
-    return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.characters.toLowerCase()}...`;
-  };
-
-  const getButtonText = () => {
-    return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.characters}`;
-  };
-
-  const processRemoveBg = async (imageUrl: string): Promise<string> => {
-    return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
-  };
-
-  const modifyEdge = async (id: string, amount: number) => {
-    // amount > 0 = erode (shrink), amount -1 = RESET (Undo)
-    setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
-    const item = results.find(r => r.id === id);
-    if (!item) return;
-
-    if (amount === -1) {
-      // UNDO LOGIC: Revert to originalUrl if available
-      if (item.originalUrl) {
-        setResults(prev => prev.map(r => r.id === id ? { ...r, url: item.originalUrl!, isRemovingBg: false } : r));
-        // If we want to re-apply auto-remove after reset (if it was on), that's complex.
-        // For now, "Undo" means revert to RAW image (with background).
-        // If the user wants to strip background again, they can click "Wytnij Tło".
-      } else {
-        // No original stored (legacy items), nothing to do or just stop spinner
-        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
-      }
-      return;
-    }
-
-    try {
-      const newUrl = await erodeImage(item.url, amount);
-      setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
-    } catch (e) {
-      console.error(e);
-      setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
-    }
-  };
-
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
-    if (!genMale && !genFemale) {
-      setError("Wybierz przynajmniej jedną płeć.");
-      return;
-    }
+    if (!prompt && Object.keys(selectedTags).length === 0) return;
+    const gendersToGen = [];
+    if (genMale) gendersToGen.push('Male');
+    if (genFemale) gendersToGen.push('Female');
+    if (gendersToGen.length === 0) return;
 
     setLoading(true);
     setError(null);
-    setResults(prev => prev || []);
-
     try {
-      const genders: ('Male' | 'Female')[] = [];
-      if (genMale) genders.push('Male');
-      if (genFemale) genders.push('Female');
-
-      for (const g of genders) {
-        const fullPrompt = getFullPromptForGender(g);
+      for (const g of gendersToGen) {
+        const fullPrompt = getFullPrompt(g);
         const { url, modelUsed } = await generateAvatar(fullPrompt, model);
-
         let finalUrl = url;
         if (bgMode === 'transparent') {
-          try {
-            finalUrl = await processRemoveBg(url);
-          } catch (e) {
-            console.warn("Auto-remove failed", e);
-          }
+          finalUrl = await processRemoveBg(url, 'white');
         }
-
-        setResults(prev => [...prev, {
-          id: Math.random().toString(36),
+        setResults(prev => [{
+          id: Math.random().toString(36).substr(2, 9),
           url: finalUrl,
           gender: g === 'Male' ? 'Męski' : 'Żeński',
           isRemovingBg: false,
@@ -279,8 +342,8 @@ export const AvatarGenerator: React.FC = () => {
           originalPrompt: prompt,
           fullFinalPrompt: fullPrompt,
           modelUsed,
-          originalUrl: url // Store original for Undo
-        }]);
+          originalUrl: url
+        }, ...prev]);
         if (model !== 'free-pollinations') await new Promise(r => setTimeout(r, 1000));
       }
     } catch (err: any) {
@@ -306,9 +369,28 @@ export const AvatarGenerator: React.FC = () => {
     setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
     const item = results.find(r => r.id === id);
     if (!item) return;
-
     try {
-      const newUrl = await processRemoveBg(item.url);
+      const newUrl = await processRemoveBg(item.url, 'white');
+      setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
+    } catch (e) {
+      setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
+    }
+  };
+
+  const modifyEdge = async (id: string, amount: number) => {
+    setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
+    const item = results.find(r => r.id === id);
+    if (!item) return;
+    if (amount === -1) {
+      if (item.originalUrl) {
+        setResults(prev => prev.map(r => r.id === id ? { ...r, url: item.originalUrl!, isRemovingBg: false } : r));
+      } else {
+        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
+      }
+      return;
+    }
+    try {
+      const newUrl = await erodeImage(item.url, amount);
       setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
     } catch (e) {
       setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
@@ -316,92 +398,105 @@ export const AvatarGenerator: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in">
-      <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl relative">
-        <div className="flex justify-between items-center mb-4">
-          <label className="font-diablo text-amber-600 text-[10px] uppercase">Formowanie Bytu</label>
-          <div className="flex gap-4 flex-wrap justify-end">
-            <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
+    <div className="flex flex-col gap-6 animate-fade-in max-w-7xl mx-auto p-4 transition-colors duration-500">
+      {/* GŁÓWNY PANEL GENERATORA */}
+      <div className="premium-glass p-8 rounded-[2.5rem] space-y-8 relative">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <label className="text-stone-500 text-[12px] font-black uppercase tracking-[0.3em]">Ustawienia Postaci</label>
+
+          <div className="flex flex-wrap justify-center gap-4 items-center">
+            <div className="flex bg-black-40-themed border border-white/5 p-1 rounded-xl">
               {[
-                { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
-                { id: 'green', label: 'Zielone', color: 'green' },
-                { id: 'themed', label: 'Tematyczne', color: 'amber' }
+                { id: 'transparent', label: 'Czyste' },
+                { id: 'green', label: 'Screen' },
+                { id: 'themed', label: 'Scena' }
               ].map(mode => (
                 <button
                   key={mode.id}
                   onClick={() => setBgMode(mode.id as any)}
-                  className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
-                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
-                    : 'text-stone-600 hover:text-stone-400'
-                    }`}
+                  className={`relative px-4 py-2 text-[10px]font-black uppercase rounded-lg transition-all ${bgMode === mode.id ? 'bg-red-900/40 text-red-200' : 'text-stone-600 hover:text-stone-400'}`}
+                  data-tooltip={BG_MODE_DESCRIPTIONS[mode.id]}
                 >
                   {mode.label}
                 </button>
               ))}
             </div>
-            <div className="h-4 w-px bg-stone-700 mx-2"></div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="genMale"
-                checked={genMale}
-                onChange={(e) => setGenMale(e.target.checked)}
-                className="accent-red-800"
-              />
-              <label htmlFor="genMale" className="text-stone-400 text-[9px] uppercase font-serif cursor-pointer">Mężczyzna</label>
+
+            <div className="h-4 w-px bg-white/10 mx-1 hidden md:block"></div>
+
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80" data-tooltip="Generuj postać męską">
+                <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${genMale ? 'bg-red-600 border-red-600' : 'border-stone-700'}`}>
+                  {genMale && <span className="text-white text-[10px]">✓</span>}
+                </div>
+                <input type="checkbox" checked={genMale} onChange={e => setGenMale(e.target.checked)} className="hidden" />
+                <span className={`text-[9px]font-black tracking-widest ${genMale ? 'text-white' : 'text-stone-600'}`}>M</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80" data-tooltip="Generuj postać żeńską">
+                <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${genFemale ? 'bg-red-600 border-red-600' : 'border-stone-700'}`}>
+                  {genFemale && <span className="text-white text-[10px]">✓</span>}
+                </div>
+                <input type="checkbox" checked={genFemale} onChange={e => setGenFemale(e.target.checked)} className="hidden" />
+                <span className={`text-[9px]font-black tracking-widest ${genFemale ? 'text-white' : 'text-stone-600'}`}>K</span>
+              </label>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="genFemale"
-                checked={genFemale}
-                onChange={(e) => setGenFemale(e.target.checked)}
-                className="accent-red-800"
-              />
-              <label htmlFor="genFemale" className="text-stone-400 text-[9px] uppercase font-serif cursor-pointer">Kobieta</label>
-            </div>
-            <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none ml-2">
-              <option value="free-pollinations">Moc Pustki (Free)</option>
-              <option value="gemini-2.5-flash-image">Gemini Flash</option>
+
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="bg-black-40-themed border border-white/5 text-stone-500 text-[10px] font-black p-2 rounded-xl outline-none cursor-pointer hover:text-stone-300 transition-colors"
+              data-tooltip="Zmień model AI"
+            >
+              <option value="free-pollinations">MOC PUSTKI</option>
+              <option value="gemini-2.5-flash-image">GEMINI FLASH</option>
             </select>
           </div>
         </div>
 
-        {bgMode === 'themed' && (
-          <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
-            <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
-            <div className="flex flex-wrap gap-1.5">
-              {styleConfig.backgroundTags.map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => setBgTag(bgTag === tag ? '' : tag)}
-                  className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
-                    ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
-                    : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
-                    }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-4 mb-6">
-          {Object.entries(HERO_TAGS[currentStyle as keyof typeof HERO_TAGS]).map(([category, values]) => (
-            <div key={category}>
-              <label className="text-stone-500 text-[9px] uppercase mb-1 block">
-                {category === 'race' ? 'Rasa' : category === 'class' ? 'Klasa' : category === 'trait' ? 'Atrybut' : category === 'pose' ? 'Poza' : 'Styl Renderu'}
+        {/* Kategorie Tagów */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+          {bgMode === 'themed' && (
+            <div className="lg:col-span-3 p-6 bg-red-900/10 rounded-3xl border border-red-900/20 shadow-inner">
+              <label className="text-[10px] font-black text-red-700 uppercase tracking-[0.2em] mb-4 block flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                Skażenie Otoczenia
               </label>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2">
+                {styleConfig.backgroundTags.map(tag => (
+                  <button key={tag} onClick={() => setBgTag(bgTag === tag ? '' : tag)} className={`tag-button ${bgTag === tag ? 'active' : ''}`}>{tag}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {Object.entries(HERO_TAGS[currentStyle as keyof typeof HERO_TAGS] || HERO_TAGS.diablo).map(([category, values]) => (
+            <div
+              key={category}
+              className={`p-6 bg-black-40-themed rounded-[2rem]border border-white/5 hover: border-white/10 transition-all space-y-4 shadow-sm ${category === 'pose' ? 'lg:col-span-2' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-stone-500 uppercase tracking-[0.2em]">
+                  {category === 'race' ? '🧬 Rasa' :
+                    category === 'class' ? '🛡️ Klasa' :
+                      category === 'trait' ? '✨ Atrybut' :
+                        category === 'pose' ? '🧘 Poza' : '🎨 Styl'}
+                </label>
+                {selectedTags[category] && (
+                  <span className="text-[9px] font-bold text-red-500/80 animate-pulse uppercase tracking-widest">Wybrano</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {values.map(val => (
                   <button
                     key={val}
                     onClick={() => toggleTag(category, val)}
-                    className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
-                      ? 'bg-red-900/40 border-red-600 text-red-200'
-                      : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
-                      }`}
+                    className={`tag-button ${selectedTags[category] === val ? 'active' : ''}`}
+                    data-tooltip={
+                      category === 'render' ? RENDER_DESCRIPTIONS[val] :
+                        category === 'pose' ? POSE_DESCRIPTIONS[val] :
+                          category === 'race' ? RACE_DESCRIPTIONS[val] :
+                            category === 'class' ? CLASS_DESCRIPTIONS[val] : undefined
+                    }
                   >
                     {val}
                   </button>
@@ -411,76 +506,88 @@ export const AvatarGenerator: React.FC = () => {
           ))}
         </div>
 
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder={getPlaceholder()}
-          className="w-full bg-black border border-stone-800 p-4 text-stone-200 mb-6 outline-none focus:border-red-900 min-h-[80px]"
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {genMale && (
-            <PromptDisplay label="Dla Mężczyzny" text={getFullPromptForGender('Male')} />
-          )}
-          {genFemale && (
-            <PromptDisplay label="Dla Kobiety" text={getFullPromptForGender('Female')} />
-          )}
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Szepty w Otchłani (Własny Opis)</label>
+          <textarea
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            className="custom-textarea"
+            placeholder="Opisz swojego bohatera, jego wygląd, zbroję, moc..."
+          />
+          <PromptDisplay label="Zapis Przeznaczenia" text={getFullPrompt(genMale ? 'Male' : 'Female')} colorClass="text-red-900" />
         </div>
 
-        {error && <p className="text-red-600 text-[10px] mb-4 text-center uppercase font-serif">{error}</p>}
+        <DiabloButton
+          onClick={handleGenerate}
+          isLoading={loading}
+          className="w-full !py-6 text-base !bg-red-900/20 !border-red-600/40 !text-red-400 group relative overflow-hidden"
+        >
+          <span className="relative z-10 flex items-center justify-center gap-3">
+            🔥 KUJ BOHATERA
+          </span>
+        </DiabloButton>
 
-        <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
+        {error && <p className="text-red-500 text-center text-xs font-black animate-bounce">{error}</p>}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {results.map((res) => (
-          <div key={res.id} className="bg-black/40 p-3 border border-stone-900 flex flex-col gap-3">
-            <div className="flex justify-between items-center">
-              <h4 className="font-diablo text-stone-500 text-center uppercase text-[10px]">{res.gender}</h4>
-              <span className="text-[9px] text-stone-700 uppercase font-serif">
-                {/* @ts-ignore */}
-                {res.modelUsed || 'Moc Pustki (Free)'}
-              </span>
-            </div>
-            <div className="relative aspect-square border border-stone-800 overflow-hidden bg-black bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)]">
-              <img src={res.url} className={`w-full h-full object-contain transition-opacity ${res.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
-            </div>
+      {/* WYNIKI */}
+      <div className="space-y-8">
+        <div className="flex items-center gap-4 text-[10px] font-black text-stone-700 uppercase tracking-[0.5em]">
+          <div className="flex-1 h-px bg-white/5"></div>
+          Galeria Przeznaczenia
+          <div className="flex-1 h-px bg-white/5"></div>
+        </div>
 
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center bg-stone-900/50 p-1 border border-stone-800">
-                <span className="text-[8px] text-stone-500 uppercase font-serif">Krawędź</span>
-                <div className="flex gap-1">
-                  <button onClick={() => modifyEdge(res.id, 1)} className="bg-black text-amber-600 w-5 h-5 flex items-center justify-center text-[12px] border border-stone-700 hover:border-amber-600 disabled:opacity-50" disabled={res.isRemovingBg} title="Dotnij (Zmniejsz)">-</button>
-                  <button onClick={() => modifyEdge(res.id, -1)} className="bg-black text-emerald-600 w-5 h-5 flex items-center justify-center text-[12px] border border-stone-700 hover:border-emerald-600 disabled:opacity-50" disabled={res.isRemovingBg || !res.originalUrl} title="Cofnij (Reset)">↺</button>
+        {results.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center opacity-10 border-2 border-dashed border-stone-800 rounded-[3rem]">
+            <span className="text-6xl mb-4">⚔️</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.5em]">Pustka czeka na Twoją wizję</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-32">
+            {results.map((res) => (
+              <div key={res.id} className="result-card group">
+                <div className="p-4 flex justify-between items-center bg-black-20-themed border-b border-white/5">
+                  <div className="flex gap-2 items-center">
+                    <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">{res.gender}</span>
+                    <span className="text-stone-700">/</span>
+                    <span className="text-[8px] text-stone-500 font-bold uppercase">{res.modelUsed?.split('-')[0] || 'AI'}</span>
+                  </div>
+                  <button onClick={() => setResults(prev => prev.filter(r => r.id !== res.id))} className="text-stone-600 hover:text-red-500 transition-colors" data-tooltip="Usuń z galerii">✕</button>
+                </div>
+
+                <div className="relative aspect-square m-6 rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl bg-black/40 checkerboard-grid">
+                  <img
+                    src={res.url}
+                    alt="Bohater"
+                    className={`w-full h-full object-contain p-4 transition-all duration-700 ${res.isRemovingBg ? 'scale-90 opacity-40 blur-md' : 'group-hover:scale-105'}`}
+                  />
+                  {res.isRemovingBg && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                      <div className="w-12 h-12 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 pt-0 space-y-3">
+                  <div className="flex items-center justify-between bg-black-40-themed rounded-xl p-2 border border-white/5">
+                    <span className="text-[9px] font-black text-stone-600 uppercase ml-2 tracking-widest">Krawędzie</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => modifyEdge(res.id, 1)} className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 text-red-500 hover:border-red-500 transition-all font-black" data-tooltip="Zwężaj kontur">-</button>
+                      <button onClick={() => modifyEdge(res.id, -1)} className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 text-emerald-500 hover:border-emerald-500 transition-all font-black text-[10px]" data-tooltip="Cofnij zmiany">↺</button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => downloadImage(res.url, `hero_${res.id}.png`)} className="col-span-2 py-3 rounded-xl bg-red-600/10 border border-red-600/20 text-[10px] font-black uppercase text-red-400 hover:bg-red-600/20 transition-all" data-tooltip="Zapisz na dysku">Pobierz PNG</button>
+                    <button onClick={() => makeToken(res.id)} className="py-2.5 rounded-xl bg-stone-900 border border-stone-800 text-[9px] font-black uppercase hover:bg-white/5 transition-all text-white/50" data-tooltip="Stwórz żeton VTT">Token</button>
+                    <button onClick={() => removeBg(res.id)} className="py-2.5 rounded-xl bg-stone-900 border border-stone-800 text-[9px] font-black uppercase hover:bg-white/5 transition-all text-white/50" data-tooltip="Ponów wycinanie">Wytnij</button>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex gap-2 mt-1">
-                <button onClick={() => removeBg(res.id)} className="bg-stone-900 text-stone-500 text-[8px] uppercase p-1 border border-stone-800 hover:text-white flex-1 transition-colors">Wytnij Tło</button>
-                <DiabloButton
-                  onClick={() => makeToken(res.id)}
-                  isLoading={res.isRemovingBg}
-                  className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
-                  title="Stwórz Token VTT"
-                >
-                  Token
-                </DiabloButton>
-                <button
-                  onClick={() => downloadImage(res.url, `sanctuary_avatar_${res.id}.png`)}
-                  className="bg-black text-stone-600 text-[8px] uppercase p-1 border border-stone-800 hover:text-white flex-1 text-center"
-                >
-                  Zapisz
-                </button>
-                <button
-                  onClick={() => setResults(prev => prev.filter(r => r.id !== res.id))}
-                  className="bg-red-900/20 text-red-500 text-[8px] uppercase p-1 border border-red-900/50 hover:bg-red-900/40 px-2"
-                >
-                  X
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

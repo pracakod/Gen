@@ -41,22 +41,22 @@ export interface StyleConfig {
 export const GAME_STYLES: Record<GameStyle, StyleConfig> = {
     diablo: {
         id: 'diablo',
-        name: 'Dark Fantasy (Diablo)',
+        name: 'Diablo',
         icon: '⚔️',
         colors: {
-            primary: 'red-800',
-            secondary: 'stone-800',
-            accent: 'amber-700',
-            bg: 'sanctuary-900'
+            primary: 'red-950',
+            secondary: 'zinc-900',
+            accent: 'red-600',
+            bg: 'black'
         },
-        artStyle: "Diablo 4 concept art style, dark fantasy, gothic horror, photorealistic, hyperrealistic, 8k resolution, cinematic lighting, volumetric fog, detailed textures, sharp focus, unreal engine 5 render",
+        artStyle: "Diablo 4 concept art style, dark fantasy, gothic horror, masterpiece, 8k resolution, highly detailed, sharp focus, cinematic lighting, detailed textures, digital illustration, blizzard entertainment style",
         lighting: "dramatic chiaroscuro lighting, dark ominous atmosphere, rim lighting, gloom, shadows",
         environment: "dark dungeon background, cathedral ruins, sanctuary world atmosphere",
         negative: "bad anatomy, blurry, low quality, cartoon, anime, bright colors, happy, cute, text, watermark, signature, ugly face, deformed hands",
         lorePersona: `Jesteś Deckardem Cainem, ostatnim z Horadrimów, uczonym i strażnikiem wiedzy w świecie Sanktuarium (Diablo).
 Używaj archaicznego, tajemniczego i nieco podniosłego języka. Odwołuj się do Wiecznego Konfliktu.`,
-        headerTitle: 'Kuźnia Sanktuarium',
-        tagline: 'Twórz. Walcz. Zwyciężaj.',
+        headerTitle: 'SANCTUARY FORGE',
+        tagline: 'BETA ACCESS • PROTOCOL 2.5',
         tabLabels: {
             characters: 'Bohaterowie',
             items: 'Przedmioty',
@@ -73,13 +73,13 @@ Używaj archaicznego, tajemniczego i nieco podniosłego języka. Odwołuj się d
 
     cyberpunk: {
         id: 'cyberpunk',
-        name: 'Cyberpunk (2077)',
+        name: 'Cyberpunk',
         icon: '🌃',
         colors: {
-            primary: 'cyan-500',
-            secondary: 'purple-900',
-            accent: 'pink-500',
-            bg: 'gray-950'
+            primary: 'cyan-950',
+            secondary: 'gray-900',
+            accent: 'cyan-400',
+            bg: 'neutral-950'
         },
         artStyle: "Cyberpunk 2077 concept art style, neon noir, sci-fi dystopia, digital art, chrome and neon, masterpiece, best quality, 8k resolution, holographic effects, rain reflections, night city atmosphere",
         lighting: "neon glow lighting, pink and cyan neons, wet reflections, volumetric light rays, cybernetic enhancement glow",
@@ -87,8 +87,8 @@ Używaj archaicznego, tajemniczego i nieco podniosłego języka. Odwołuj się d
         negative: "bad anatomy, blurry, low quality, medieval, fantasy, nature, trees, daylight, happy, cute, text, watermark, signature",
         lorePersona: `Jesteś V, legendą Night City. Twój język to uliczny slang przyszłości, pełen cybernetycznego żargonu.
 Mów o korporacjach, implantach, netrunnerach i życiu na krawędzi w megamieście.`,
-        headerTitle: 'Night City Forge',
-        tagline: 'Chrome. Neon. Legenda.',
+        headerTitle: 'NIGHT CITY FORGE',
+        tagline: 'NEURAL LINK • EST. 2077',
         tabLabels: {
             characters: 'Soliści',
             items: 'Cyberware',
@@ -105,12 +105,12 @@ Mów o korporacjach, implantach, netrunnerach i życiu na krawędzi w megamieśc
 
     pixelart: {
         id: 'pixelart',
-        name: 'Pixel Art (Retro)',
+        name: 'Pixel Art',
         icon: '👾',
         colors: {
-            primary: 'emerald-500',
-            secondary: 'slate-800',
-            accent: 'yellow-400',
+            primary: 'emerald-950',
+            secondary: 'slate-900',
+            accent: 'emerald-400',
             bg: 'slate-950'
         },
         artStyle: "16-bit pixel art style, retro game aesthetic, SNES era graphics, limited color palette, crisp pixels, no anti-aliasing, sprite sheet style, nostalgic gaming, masterpiece pixel work",
@@ -119,8 +119,8 @@ Mów o korporacjach, implantach, netrunnerach i życiu na krawędzi w megamieśc
         negative: "3D, realistic, photorealistic, smooth gradients, high resolution details, anti-aliasing, blurry, complex lighting",
         lorePersona: `Jesteś narratorem klasycznej gry 16-bitowej. Twój język to proste, nostalgiczne opisy w stylu retro RPG.
 Używaj krótkich, dynamicznych zdań jak w starych grach z SNES i Mega Drive.`,
-        headerTitle: 'Pixel Forge',
-        tagline: '16-bit. Retro. Epicko.',
+        headerTitle: 'PIXEL FORGE',
+        tagline: '8-BIT CORE • EMULATION ON',
         tabLabels: {
             characters: 'Pixel Bohater',
             items: 'Ekwipunek',
@@ -137,13 +137,13 @@ Używaj krótkich, dynamicznych zdań jak w starych grach z SNES i Mega Drive.`,
 
     gta: {
         id: 'gta',
-        name: 'Crime City (GTA)',
+        name: 'GTA',
         icon: '🚗',
         colors: {
-            primary: 'orange-500',
-            secondary: 'blue-900',
-            accent: 'yellow-300',
-            bg: 'zinc-900'
+            primary: 'zinc-950',
+            secondary: 'zinc-900',
+            accent: 'orange-500',
+            bg: 'black'
         },
         artStyle: "GTA 5 loading screen art style, digital vector illustration, cel shaded, bold black outlines, high contrast, saturated colors, professional comic art, Rockstar Games aesthetic",
         lighting: "harsh sunlight, vibrant sunset colors, dramatic long shadows, golden hour",
@@ -151,8 +151,8 @@ Używaj krótkich, dynamicznych zdań jak w starych grach z SNES i Mega Drive.`,
         negative: "photorealistic, 3D render, fuzzy, blurry, messy lines, classical painting, medieval, magic",
         lorePersona: `Jesteś informatorem z podziemia Crime City. Twoja mowa jest konkretna, cyniczna i pełna żargonu przestępczego.
 Mów o skokach, forsowaniu i szacunku na dzielni.`,
-        headerTitle: 'Underground Forge',
-        tagline: 'Kasa. Respekt. Władza.',
+        headerTitle: 'CRIME FORGE',
+        tagline: 'EST. 1993 • UNDERGROUND',
         tabLabels: {
             characters: 'Gangsterzy',
             items: 'Akcesoria',
@@ -169,13 +169,13 @@ Mów o skokach, forsowaniu i szacunku na dzielni.`,
 
     fortnite: {
         id: 'fortnite',
-        name: 'Battle Royale (Fortnite)',
+        name: 'Fortnite',
         icon: '🛡️',
         colors: {
-            primary: 'blue-500',
-            secondary: 'purple-600',
-            accent: 'yellow-400',
-            bg: 'indigo-950'
+            primary: 'indigo-950',
+            secondary: 'slate-900',
+            accent: 'blue-500',
+            bg: 'zinc-950'
         },
         artStyle: "Stylized 3D character design, Fortnite style, vibrant colorful palette, clean smooth surfaces, heroic proportions, high-quality Unreal Engine 5 render, expressive stylized features, battle royale aesthetic",
         lighting: "bright bouncy lighting, saturated colors, glowing energy effects, clean shadows",
@@ -183,8 +183,8 @@ Mów o skokach, forsowaniu i szacunku na dzielni.`,
         negative: "dark, scary, gritty, realistic, photorealistic, dirty, rusty, gore, blood, black and white",
         lorePersona: `Jesteś dowódcą operacji Battle Royale. Twój język jest entuzjastyczny, pełen energii i motywacji do walki.
 Mów o zrzutach, budowaniu tarczy i zwycięskim tańcu!`,
-        headerTitle: 'Heroic Forge',
-        tagline: 'Skacz. Buduj. Wygrywaj.',
+        headerTitle: 'HEROIC FORGE',
+        tagline: 'UNREAL ENGINE 5 • NEXUS',
         tabLabels: {
             characters: 'Skiny',
             items: 'Loot',
@@ -201,13 +201,13 @@ Mów o zrzutach, budowaniu tarczy i zwycięskim tańcu!`,
 
     hades: {
         id: 'hades',
-        name: 'Divine Underworld (Hades)',
+        name: 'Hades',
         icon: '🔥',
         colors: {
-            primary: 'red-600',
-            secondary: 'orange-900',
-            accent: 'yellow-500',
-            bg: 'neutral-950'
+            primary: 'orange-950',
+            secondary: 'red-950',
+            accent: 'orange-600',
+            bg: 'black'
         },
         artStyle: "Hades game art style, Supergiant Games aesthetic, stylized painterly textures, brush stroke details, high contrast shadows, intricate patterns, mythological themes, sharp angular lines, divine glow",
         lighting: "ethereal magical glow, high contrast lighting, warm embers vs cold spectral light",
@@ -215,8 +215,8 @@ Mów o zrzutach, budowaniu tarczy i zwycięskim tańcu!`,
         negative: "3D, photorealistic, realistic proportions, blurry, soft, pastel colors, cute, happy",
         lorePersona: `Jesteś sędzią dusz w podziemnym królestwie. Twoja mowa jest poetycka, pełna patosu i odniesień do antycznej Grecji.
 Mów o przeznaczeniu, bóstwach i wiecznym cyklu walki.`,
-        headerTitle: 'Divine Forge',
-        tagline: 'Krew. Ciemność. Mit.',
+        headerTitle: 'ASPHODEL FORGE',
+        tagline: 'ETERNAL RECURRENCE • STYX',
         tabLabels: {
             characters: 'Bóstwa',
             items: 'Dary',
@@ -233,13 +233,13 @@ Mów o przeznaczeniu, bóstwach i wiecznym cyklu walki.`,
 
     tibia: {
         id: 'tibia',
-        name: 'Classic RPG (Tibia)',
+        name: 'Tibia',
         icon: '🕯️',
         colors: {
-            primary: 'stone-600',
-            secondary: 'green-900',
-            accent: 'emerald-400',
-            bg: 'stone-950'
+            primary: 'stone-950',
+            secondary: 'stone-900',
+            accent: 'green-600',
+            bg: 'black'
         },
         artStyle: "Classic 2D isometric RPG style, old-school pixel-like textures, Tibia aesthetic, top-down perspective, simple but detailed sprites, vibrant but dangerous world, nostalgic fantasy art",
         lighting: "2D tile-based lighting, limited light radius, classic fantasy atmosphere",
@@ -247,8 +247,8 @@ Mów o przeznaczeniu, bóstwach i wiecznym cyklu walki.`,
         negative: "3D, modern graphics, photorealistic, high resolution, soft shadows, anime",
         lorePersona: `Jesteś starym strażnikiem miejskim z osady Thais. Twój język jest prosty, ostrzegający przed niebezpieczeństwami.
 Mów o wyprawach po rzadkie runy, polowaniu na smoki i handlu w depo.`,
-        headerTitle: 'Oldschool Forge',
-        tagline: 'Mana. Runy. Przygoda.',
+        headerTitle: 'CIPHER FORGE',
+        tagline: 'ISOMETRIC PROTOCOL • EST. 1997',
         tabLabels: {
             characters: 'Profesje',
             items: 'Rarytasy',
@@ -265,13 +265,13 @@ Mów o wyprawach po rzadkie runy, polowaniu na smoki i handlu w depo.`,
 
     cuphead: {
         id: 'cuphead',
-        name: 'Rubber Hose (Cuphead)',
+        name: 'Cuphead',
         icon: '☕',
         colors: {
-            primary: 'red-600',
+            primary: 'stone-900',
             secondary: 'stone-800',
-            accent: 'blue-600',
-            bg: 'stone-950'
+            accent: 'red-600',
+            bg: 'neutral-900'
         },
         artStyle: "1930s rubber hose animation style, hand-drawn cellulose animation, Cuphead game aesthetic, grainy vintage film texture, watercolor backgrounds, surreal character designs, pie-cut eyes, sepia and vintage colors",
         lighting: "flat 2D animation lighting, subtle paper texture overlay, vintage cinematic feel, low saturation",
@@ -279,8 +279,8 @@ Mów o wyprawach po rzadkie runy, polowaniu na smoki i handlu w depo.`,
         negative: "3D, digital, clean, modern, high tech, realistic, serious, dark, photorealistic, vibrant bright colors, 4k, digital render",
         lorePersona: `Jesteś konferansjerem z lat 30-tych. Twoja mowa jest barwna, pełna entuzjazzmu i staromodnych zwrotów.
 Mów o wielkim show, hazardzie z diabłem i szalonej przygodzie!`,
-        headerTitle: 'Vintage Forge',
-        tagline: 'Show. Swing. Przebój.',
+        headerTitle: 'VINTAGE FORGE',
+        tagline: 'INKWELL STUDIOS • MCMXXX',
         tabLabels: {
             characters: 'Kreskówki',
             items: 'Bonusy',
@@ -299,14 +299,14 @@ Mów o wielkim show, hazardzie z diabłem i szalonej przygodzie!`,
 export const getStyleColors = (style: GameStyle) => {
     const config = GAME_STYLES[style] || GAME_STYLES['diablo'];
 
-    let gradient = 'from-black via-red-900 to-black';
-    if (style === 'cyberpunk') gradient = 'from-purple-900 via-cyan-500 to-pink-500';
-    if (style === 'pixelart') gradient = 'from-slate-900 via-emerald-500 to-yellow-400';
-    if (style === 'gta') gradient = 'from-orange-600 via-blue-900 to-black';
-    if (style === 'fortnite') gradient = 'from-blue-500 via-purple-600 to-indigo-900';
-    if (style === 'hades') gradient = 'from-red-900 via-orange-900 to-black';
-    if (style === 'tibia') gradient = 'from-stone-900 via-green-900 to-black';
-    if (style === 'cuphead') gradient = 'from-red-900 via-stone-800 to-blue-900';
+    let gradient = 'from-black via-red-950 to-black';
+    if (style === 'cyberpunk') gradient = 'from-black via-cyan-950 to-black';
+    if (style === 'pixelart') gradient = 'from-black via-emerald-950 to-black';
+    if (style === 'gta') gradient = 'from-black via-zinc-950 to-black';
+    if (style === 'fortnite') gradient = 'from-black via-indigo-950 to-black';
+    if (style === 'hades') gradient = 'from-black via-orange-950 to-black';
+    if (style === 'tibia') gradient = 'from-black via-stone-950 to-black';
+    if (style === 'cuphead') gradient = 'from-black via-stone-900 to-black';
 
     return {
         ...config.colors,

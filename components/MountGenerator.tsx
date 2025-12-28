@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DiabloButton } from './DiabloButton';
 import { generateAvatar } from '../services/geminiService';
@@ -18,34 +17,34 @@ const MOUNT_TAGS = {
         element: ['Neonowy', 'Chromowy', 'Militarny', 'Zglitchowany']
     },
     pixelart: {
-        type: ['Koń', 'Gryf', 'Smok', 'Wielka Żaba', 'Chmura'],
-        armor: ['Zwykły', 'Srebrny', 'Złoty', 'Magiczny'],
-        element: ['Latający', 'Szybki', 'Pikselowy', 'Mocny']
+        type: ['Koń 8-bit', 'Gryf', 'Smok', 'Chmura'],
+        armor: ['Brak', 'Drewniany', 'Złoty', 'Magiczny'],
+        element: ['Jasny', 'Retro', 'Vibrant', 'Przygaszony']
     },
     gta: {
-        type: ['Sportowe', 'Muscle Car', 'Motocykl', 'SUV', 'Helikopter'],
-        armor: ['Cywilny', 'Tuning', 'Policyjny', 'Opancerzony'],
-        element: ['Street', 'Luxury', 'Underworld']
+        type: ['Sportowe', 'Muscle Car', 'Motocykl', 'SUV'],
+        armor: ['Seryjne', 'Tuning', 'Militarne', 'Zniszczone'],
+        element: ['Chrom', 'Matowe', 'Złoto', 'Neon pod spodem']
     },
     fortnite: {
-        type: ['Quad', 'Samochód', 'Motor', 'UFO', 'Deskolotka'],
-        armor: ['Default', 'Camo', 'Sci-fi', 'Cartoon'],
-        element: ['Nitro', 'Kinetic', 'Chrome']
+        type: ['Loot Shark', 'Dinozaur', 'Deska Lewitująca', 'Quad'],
+        armor: ['Kolorowy', 'Mechaniczny', 'Przezroczysty', 'Epik'],
+        element: ['Energia', 'Tęcza', 'Lupa', 'Glitched']
     },
     hades: {
-        type: ['Rydwan', 'Bestia z Tartaru', 'Cień', 'Pegaz'],
-        armor: ['Boski', 'Ognisty', 'Mroczny', 'Złoty'],
-        element: ['Olympus', 'Tartarus', 'Elysium']
+        type: ['Rydwan', 'Cerber', 'Wąż Morski', 'Duchowy Rumak'],
+        armor: ['Brązowy', 'Spiżowy', 'Złoty', 'Kościany'],
+        element: ['Ogień', 'Lód', 'Cień', 'Blask Olimpu']
     },
     tibia: {
-        type: ['War Bear', 'Noble Lion', 'Draptor', 'Midnight Panther'],
-        armor: ['Saddled', 'Armored', 'Rare'],
-        element: ['Fast', 'Legendary', 'Oldschool']
+        type: ['War Bear', 'Panda', 'Terror Bird', 'Draptor'],
+        armor: ['Siodło', 'Worki', 'Pełna Zbroja', 'Brak'],
+        element: ['Classic', 'Tibiany', 'Old-school', 'Rare']
     },
     cuphead: {
-        type: ['Aeroplan', 'Auto', 'Rower', 'Balon'],
-        armor: ['Retro', 'Hand-drawn', 'Surreal'],
-        element: ['Winged', 'Steaming', 'Bouncing']
+        type: ['Samolot', 'Automobil', 'Rower', 'Wózek'],
+        armor: ['Kreskówkowy', 'Retro', 'Gumowy', 'Shiny'],
+        element: ['Vintage', 'Sepia', 'Inkwell', 'Grainy']
     }
 };
 
@@ -59,113 +58,137 @@ interface Result {
 
 export const MountGenerator: React.FC = () => {
     const { styleConfig, currentStyle } = useStyle();
-    const [prompt, setPrompt] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    // Storage key per style
     const storageKey = `sanctuary_mounts_${currentStyle}`;
     const settingsKey = `sanctuary_mounts_settings_${currentStyle}`;
 
+    const [prompt, setPrompt] = useState(() => {
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).prompt ?? '' : '';
+        } catch { return ''; }
+    });
+    const [loading, setLoading] = useState(false);
+
     const [bgMode, setBgMode] = useState<'transparent' | 'green' | 'themed'>(() => {
-        const saved = localStorage.getItem(settingsKey);
-        if (!saved) return 'transparent';
-        const parsed = JSON.parse(saved);
-        if (parsed.bgMode) return parsed.bgMode;
-        return parsed.autoRemoveBg ? 'transparent' : 'green';
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            if (!saved) return 'transparent';
+            const parsed = JSON.parse(saved);
+            return parsed.bgMode ?? 'transparent';
+        } catch { return 'transparent'; }
     });
 
     const [bgTag, setBgTag] = useState(() => {
-        const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).bgTag ?? '' : '';
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).bgTag ?? '' : '';
+        } catch { return ''; }
     });
 
     const [model, setModel] = useState(() => {
-        const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).model ?? 'free-pollinations' : 'free-pollinations';
+        } catch { return 'free-pollinations'; }
     });
 
-    // Load from local storage (per style)
+    const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
+        try {
+            const saved = localStorage.getItem(settingsKey);
+            return saved ? JSON.parse(saved).selectedTags ?? {} : {};
+        } catch { return {}; }
+    });
+
     const [results, setResults] = useState<Result[]>(() => {
         const saved = localStorage.getItem(storageKey);
-        return saved ? JSON.parse(saved) : [];
+        try {
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
     });
 
-    // Save to local storage (per style)
+    const [error, setError] = useState<string | null>(null);
+
     React.useEffect(() => {
         localStorage.setItem(storageKey, JSON.stringify(results));
     }, [results, storageKey]);
 
-    const [selectedTags, setSelectedTags] = useState<Record<string, string>>(() => {
-        const saved = localStorage.getItem(settingsKey);
-        return saved ? JSON.parse(saved).selectedTags ?? {} : {};
-    });
-
-    const toggleTag = (category: string, value: string) => {
-        setSelectedTags(prev => ({
-            ...prev,
-            [category]: prev[category] === value ? '' : value
+    React.useEffect(() => {
+        localStorage.setItem(settingsKey, JSON.stringify({
+            bgMode,
+            bgTag,
+            model,
+            selectedTags,
+            prompt
         }));
-    };
+    }, [bgMode, bgTag, model, selectedTags, prompt, settingsKey]);
 
-    // Save settings
     React.useEffect(() => {
-        localStorage.setItem(settingsKey, JSON.stringify({ bgMode, bgTag, model, selectedTags }));
-    }, [bgMode, bgTag, model, selectedTags, settingsKey]);
-
-    // Reload when style changes
-    React.useEffect(() => {
-        const saved = localStorage.getItem(storageKey);
-        setResults(saved ? JSON.parse(saved) : []);
-    }, [currentStyle]);
-
-    const getMountPrefix = () => {
-        if (currentStyle === 'cyberpunk') return 'Cyberpunk 2077 vehicle, futuristic motorcycle or hover car';
-        if (currentStyle === 'pixelart') return '16-bit pixel art mount sprite, retro game vehicle or creature';
-        return 'Diablo 4 mount';
-    };
-
-    const getFullPrompt = () => {
-        const parts = [getMountPrefix()];
-        if (selectedTags.type) parts.push(selectedTags.type);
-        if (selectedTags.armor) parts.push(selectedTags.armor);
-        if (selectedTags.element) parts.push(selectedTags.element);
-        if (prompt) parts.push(prompt);
-
-        const baseText = parts.join(', ');
-        const fitInFrame = "wide shot, side view, centered, entire mount COMPLETELY INSIDE the frame, CLEAR SPACE ABOVE HEAD AND BELOW FEET, generous padding around the subject, zoomed out significantly to ensure nothing is cut off";
-        const cleanEdges = "clean sharp edges, NO FOG, NO PARTICLES, NO BLOOM, NO SMOKE, NO VOLUMETRIC LIGHTING, high contrast between subject and background";
-        const qualityBoost = "masterpiece, best quality, 8k resolution, ultra detailed, highly detailed, professional artwork, majestic creature, detailed fur, detailed armor";
-
-        if (bgMode === 'transparent') {
-            return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, ${fitInFrame}, ${cleanEdges}, transparent background, no background, isolated subject, PNG with alpha channel, cut out, empty background, no shadows, NO TEXT, ${styleConfig.negative}`;
-        } else if (bgMode === 'green') {
-            return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, side view, ${fitInFrame}, ${cleanEdges}, on solid pure neon green background #00FF00, flat color background, no shadows on background, NO TEXT, ${styleConfig.negative}`;
+        const savedResults = localStorage.getItem(storageKey);
+        try {
+            setResults(savedResults ? JSON.parse(savedResults) : []);
+        } catch {
+            setResults([]);
         }
 
-        const bgDesc = bgTag ? `${bgTag} background, ${styleConfig.environment}` : styleConfig.environment;
-        return `${qualityBoost}, ${baseText}, ${styleConfig.artStyle}, ${styleConfig.lighting}, ${bgDesc}, side view, ${fitInFrame}, ${cleanEdges}, NO TEXT, ${styleConfig.negative}`;
+        const savedSettings = localStorage.getItem(settingsKey);
+        if (savedSettings) {
+            try {
+                const parsed = JSON.parse(savedSettings);
+                setBgMode(parsed.bgMode || 'transparent');
+                setBgTag(parsed.bgTag || '');
+                setModel(parsed.model || 'free-pollinations');
+                setSelectedTags(parsed.selectedTags || {});
+                setPrompt(parsed.prompt || '');
+            } catch {
+                setBgMode('transparent');
+                setBgTag('');
+                setModel('free-pollinations');
+                setSelectedTags({});
+                setPrompt('');
+            }
+        } else {
+            setBgMode('transparent');
+            setBgTag('');
+            setModel('free-pollinations');
+            setSelectedTags({});
+            setPrompt('');
+        }
+    }, [currentStyle, storageKey, settingsKey]);
+
+    const getFullPrompt = () => {
+        const parts = [currentStyle === 'diablo' ? 'Diablo 4 mount' : 'epic mount'];
+        Object.values(selectedTags).forEach(v => v && parts.push(v));
+        if (prompt) parts.push(prompt);
+
+        // Ulepszony prompt dla przezroczystości (wymuszanie białego tła dla algorytmu)
+        const bgStr = bgMode === 'transparent' ? 'on pure white background, isolated subject, high contrast' :
+            bgMode === 'green' ? 'on neon green background #00FF00' :
+                (bgTag || 'themed background');
+
+        return `${parts.join(', ')}, full body shot, side view, centered, masterpiece, best quality, 8k, ${bgStr}, no text, ${styleConfig.artStyle}, ${styleConfig.negative}`;
     };
 
-    const getPlaceholder = () => {
-        return `${styleConfig.placeholders.lore.replace('...', '')} dla ${styleConfig.tabLabels.mounts.toLowerCase()}...`;
-    };
+    const handleGenerate = async () => {
+        if (!prompt && Object.keys(selectedTags).length === 0) return;
+        setLoading(true);
+        setError(null);
 
-    const getButtonText = () => {
-        return `${styleConfig.buttons.generate} ${styleConfig.tabLabels.mounts}`;
-    };
-
-    const processRemoveBg = async (imageUrl: string) => {
-        return removeBackground(imageUrl, bgMode === 'transparent' ? 'white' : 'green');
-    };
-
-    const removeBg = async (id: string) => {
-        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
-        const item = results.find(r => r.id === id);
-        if (!item) return;
         try {
-            const newUrl = await processRemoveBg(item.url);
-            setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
-        } catch (e) { setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r)); }
+            const { url, modelUsed } = await generateAvatar(getFullPrompt(), model);
+            let finalUrl = url;
+            if (bgMode === 'transparent') finalUrl = await removeBackground(url, 'white');
+
+            setResults(prev => [{
+                id: Math.random().toString(),
+                url: finalUrl,
+                modelUsed,
+                originalUrl: url
+            }, ...prev]);
+        } catch (e) {
+            setError("Wierzchowiec uciekł w popłochu.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const modifyEdge = async (id: string, amount: number) => {
@@ -173,9 +196,8 @@ export const MountGenerator: React.FC = () => {
         const item = results.find(r => r.id === id);
         if (!item) return;
 
-        if (amount === -1) {
-            if (item.originalUrl) setResults(prev => prev.map(r => r.id === id ? { ...r, url: item.originalUrl!, isRemovingBg: false } : r));
-            else setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
+        if (amount === -1 && item.originalUrl) {
+            setResults(prev => prev.map(r => r.id === id ? { ...r, url: item.originalUrl!, isRemovingBg: false } : r));
             return;
         }
 
@@ -187,153 +209,143 @@ export const MountGenerator: React.FC = () => {
         }
     };
 
-    const makeToken = async (id: string) => {
-        setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: true } : r));
-        const item = results.find(r => r.id === id);
-        if (!item) return;
-        try {
-            const newUrl = await createToken(item.url);
-            setResults(prev => prev.map(r => r.id === id ? { ...r, url: newUrl, isRemovingBg: false } : r));
-        } catch (e) {
-            setResults(prev => prev.map(r => r.id === id ? { ...r, isRemovingBg: false } : r));
+    const toggleTag = (category: string, value: string) => {
+        setSelectedTags(prev => ({
+            ...prev,
+            [category]: prev[category] === value ? '' : value
+        }));
+    };
+
+    const getCategoryIcon = (category: string) => {
+        switch (category) {
+            case 'type': return '🐎 Rasa';
+            case 'armor': return '🛡️ Siodło';
+            default: return '✨ Detal';
         }
     };
 
-    const handleGenerate = async () => {
-        if (!prompt) return;
-        setLoading(true);
-        const full = getFullPrompt();
-        try {
-            const { url, modelUsed } = await generateAvatar(full, model);
-            let finalUrl = url;
-            if (bgMode === 'transparent') {
-                try { finalUrl = await processRemoveBg(url); } catch (e) { }
-            }
-            setResults(prev => [{ id: Math.random().toString(), url: finalUrl, modelUsed, originalUrl: url }, ...prev]);
-        } catch (e) { console.error(e) } finally { setLoading(false) }
-    };
-
     return (
-        <div className="flex flex-col gap-6 animate-fade-in">
-            <div className="bg-stone-900/90 p-6 border-2 border-stone-800 shadow-2xl">
-                <div className="flex justify-between items-center mb-4">
-                    <label className="font-diablo text-orange-900 text-[10px] uppercase block">Stajnie Sanktuarium</label>
-                    <div className="flex bg-black/40 border border-stone-800 p-0.5 rounded overflow-hidden">
-                        {[
-                            { id: 'transparent', label: 'Przezroczyste', color: 'emerald' },
-                            { id: 'green', label: 'Zielone', color: 'green' },
-                            { id: 'themed', label: 'Tematyczne', color: 'amber' }
-                        ].map(mode => (
-                            <button
-                                key={mode.id}
-                                onClick={() => setBgMode(mode.id as any)}
-                                className={`px-2 py-1 text-[8px] uppercase font-serif transition-all ${bgMode === mode.id
-                                    ? `bg-${mode.color}-900/40 text-${mode.color}-400`
-                                    : 'text-stone-600 hover:text-stone-400'
-                                    }`}
-                            >
-                                {mode.label}
-                            </button>
-                        ))}
-                    </div>
-                    <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black text-stone-300 text-[10px] p-2 border border-stone-800 outline-none">
-                        <option value="free-pollinations">🌀 Moc Pustki (Free)</option>
-                        <option value="gemini-2.5-flash-image">⚡ Gemini Flash</option>
-                    </select>
-                </div>
-
-                {bgMode === 'themed' && (
-                    <div className="mt-4 mb-6 p-4 bg-black/40 border border-amber-900/30 rounded animate-fade-in">
-                        <label className="text-amber-800 text-[9px] uppercase mb-2 block font-diablo tracking-widest">Obierz Scenerię</label>
-                        <div className="flex flex-wrap gap-1.5">
-                            {styleConfig.backgroundTags.map(tag => (
+        <div className="max-w-6xl mx-auto space-y-12 animate-fade-in p-4 transition-colors duration-500">
+            {/* Panel Główny */}
+            <div className="premium-glass p-8 md:p-12 rounded-[3rem] space-y-10 relative">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <label className="text-stone-500 text-[12px] font-black uppercase tracking-[0.4em]">Stajnie Sanktuarium</label>
+                    <div className="flex flex-wrap justify-center gap-4 items-center">
+                        <div className="flex bg-black-40-themed border border-white/5 p-1 rounded-xl">
+                            {[
+                                { id: 'transparent', label: 'Czyste' },
+                                { id: 'green', label: 'Screen' },
+                                { id: 'themed', label: 'Scena' }
+                            ].map(mode => (
                                 <button
-                                    key={tag}
-                                    onClick={() => setBgTag(bgTag === tag ? '' : tag)}
-                                    className={`px-2 py-1 text-[10px] border transition-all ${bgTag === tag
-                                        ? 'bg-amber-900/40 border-amber-600 text-amber-200 shadow-[0_0_10px_rgba(120,53,15,0.2)]'
-                                        : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
-                                        }`}
+                                    key={mode.id}
+                                    onClick={() => setBgMode(mode.id as any)}
+                                    className={`relative px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${bgMode === mode.id ? 'bg-amber-900/40 text-amber-200' : 'text-stone-600 hover:text-stone-400'}`}
+                                    data-tooltip={mode.id === 'transparent' ? 'Automatyczne wycinanie tła' : mode.id === 'green' ? 'Wierzchowiec na zielonym tle' : 'Wierzchowiec w wybranym otoczeniu'}
                                 >
-                                    {tag}
+                                    {mode.label}
                                 </button>
                             ))}
                         </div>
+                        <div className="h-4 w-px bg-white/10 hidden md:block"></div>
+                        <select value={model} onChange={(e) => setModel(e.target.value)} className="bg-black-40-themed border border-white/5 text-stone-500 text-[10px] font-black p-2.5 rounded-xl outline-none cursor-pointer hover:text-stone-300 transition-colors">
+                            <option value="free-pollinations">MOC PUSTKI</option>
+                            <option value="gemini-2.5-flash-image">GEMINI FLASH</option>
+                        </select>
                     </div>
-                )}
+                </div>
 
-                <div className="space-y-4 mb-4">
-                    {Object.entries(MOUNT_TAGS[currentStyle as keyof typeof MOUNT_TAGS]).map(([category, values]) => (
-                        <div key={category}>
-                            <label className="text-stone-500 text-[9px] uppercase mb-1 block">
-                                {category === 'type' ? 'Typ' : category === 'armor' ? 'Pancerz' : 'Atrybut'}
+                {/* Tagi */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t border-white/5">
+                    {bgMode === 'themed' && (
+                        <div className="md:col-span-3 p-6 bg-amber-900/10 rounded-3xl border border-amber-900/20 shadow-inner">
+                            <label className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4 block flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                Scyneria Podróży
                             </label>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-2">
+                                {styleConfig.backgroundTags.map(tag => (
+                                    <button key={tag} onClick={() => setBgTag(bgTag === tag ? '' : tag)} className={`tag-button ${bgTag === tag ? 'active' : ''}`}>{tag}</button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(Object.entries(MOUNT_TAGS[currentStyle as keyof typeof MOUNT_TAGS] || MOUNT_TAGS.diablo)).map(([category, values]) => (
+                        <div key={category} className="p-6 bg-black-40-themed rounded-[2rem] border border-white/5 space-y-4 hover:border-white/10 transition-all">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest">
+                                    {getCategoryIcon(category)}
+                                </label>
+                                {selectedTags[category] && <span className="text-[8px] font-black text-amber-500 animate-pulse">WYBRANO</span>}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
                                 {values.map(val => (
-                                    <button
-                                        key={val}
-                                        onClick={() => toggleTag(category, val)}
-                                        className={`px-2 py-0.5 text-[10px] border transition-all ${selectedTags[category] === val
-                                            ? 'bg-orange-900/40 border-orange-600 text-orange-200'
-                                            : 'bg-black border-stone-800 text-stone-500 hover:border-stone-600'
-                                            }`}
-                                    >
-                                        {val}
-                                    </button>
+                                    <button key={val} onClick={() => toggleTag(category, val)} className={`tag-button ${selectedTags[category] === val ? 'active' : ''}`}>{val}</button>
                                 ))}
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <input
-                    type="text"
-                    value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
-                    placeholder={getPlaceholder()}
-                    className="w-full bg-black border border-stone-800 p-4 mb-4 text-stone-200 outline-none focus:border-orange-900"
-                />
-                <div className="mb-4">
-                    <PromptDisplay label="Rozkaz" text={getFullPrompt()} colorClass="text-orange-900" />
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-widest block">Zew Wierzchowca (Opis)</label>
+                    <textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Np. koń w złotej zbroi, płonąca grzywa..." className="custom-textarea" />
+                    <PromptDisplay label="Zapis Stajennego" text={getFullPrompt()} colorClass="text-amber-900" />
                 </div>
-                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full">{getButtonText()}</DiabloButton>
+
+                <DiabloButton onClick={handleGenerate} isLoading={loading} className="w-full !py-6 text-base !bg-amber-900/20 !border-amber-600/40 !text-amber-400">
+                    🐎 SIODŁAJ WIERZCHOWCA
+                </DiabloButton>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map((res) => (
-                    <div key={res.id} className="relative group border border-stone-800 bg-black p-1 flex flex-col gap-1">
-                        <span className="absolute top-2 left-2 bg-black/60 text-[8px] text-stone-500 px-1 border border-stone-800 z-10">{res.modelUsed}</span>
-                        <div className="relative aspect-square border border-stone-800 overflow-hidden bg-black bg-[url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzjwqheqGw7mMYEiaHGwFAA7QxGL0CVF1AAAAABJRU5ErkJggg==)]">
-                            <img src={res.url} className={`w-full h-full object-contain transition-opacity ${res.isRemovingBg ? 'opacity-30' : 'opacity-100'}`} />
-                        </div>
 
-                        <div className="flex justify-between items-center bg-stone-900/50 p-1 border border-stone-800">
-                            <span className="text-[8px] text-stone-500 uppercase font-serif">Krawędź</span>
-                            <div className="flex gap-1">
-                                <button onClick={() => modifyEdge(res.id, 1)} className="bg-black text-amber-600 w-5 h-5 flex items-center justify-center text-[12px] border border-stone-700 hover:border-amber-600 disabled:opacity-50" disabled={res.isRemovingBg} title="Dotnij (Zmniejsz)">-</button>
-                                <button onClick={() => modifyEdge(res.id, -1)} className="bg-black text-emerald-600 w-5 h-5 flex items-center justify-center text-[12px] border border-stone-700 hover:border-emerald-600 disabled:opacity-50" disabled={res.isRemovingBg || !res.originalUrl} title="Cofnij (Reset)">↺</button>
-                            </div>
-                        </div>
+            {/* Wyniki */}
+            <div className="space-y-8">
+                <div className="flex items-center gap-4 text-[10px] font-black text-stone-700 uppercase tracking-[0.4em]">
+                    <div className="flex-1 h-px bg-white/5"></div>
+                    Twoje Stada
+                    <div className="flex-1 h-px bg-white/5"></div>
+                </div>
 
-                        <div className="flex gap-1 mt-1">
-                            <button onClick={() => removeBg(res.id)} className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase py-1 border border-stone-800 hover:text-white">Wytnij</button>
-                            <DiabloButton
-                                onClick={() => makeToken(res.id)}
-                                isLoading={res.isRemovingBg}
-                                className="bg-stone-900 border-stone-800 text-amber-500 text-[8px] uppercase p-1 h-auto flex-1 transition-colors min-h-0 py-1"
-                                title="Stwórz Token VTT"
-                            >
-                                Token
-                            </DiabloButton>
-                            <button
-                                onClick={() => downloadImage(res.url, `sanctuary_mount_${res.id}.png`)}
-                                className="flex-1 text-center bg-stone-900 text-stone-500 text-[8px] uppercase py-1 border border-stone-800 hover:text-white"
-                            >
-                                Zapisz
-                            </button>
-                            <button onClick={() => setResults(prev => prev.filter((r) => r.id !== res.id))} className="bg-red-900/80 text-white px-2 py-1 text-[10px] uppercase border border-red-900">X</button>
-                        </div>
+                {results.length === 0 ? (
+                    <div className="h-64 flex flex-col items-center justify-center opacity-10 border-2 border-dashed border-stone-800 rounded-[3rem]">
+                        <span className="text-6xl mb-4">🐎</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.5em]">Stajnie są puste</span>
                     </div>
-                ))}
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {results.map((res) => (
+                            <div key={res.id} className="result-card group">
+                                <div className="p-4 flex justify-between items-center bg-black-20-themed border-b border-white/5">
+                                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Wierzchowiec</span>
+                                    <button onClick={() => setResults(prev => prev.filter(r => r.id !== res.id))} className="text-stone-600 hover:text-red-500 transition-colors" data-tooltip="Usuń wierzchowca ze stajni">✕</button>
+                                </div>
+                                <div className="relative aspect-square checkerboard-grid m-6 rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl bg-black/40">
+                                    <img src={res.url} className={`w-full h-full object-contain p-6 transition-all duration-700 ${res.isRemovingBg ? 'scale-90 opacity-40 blur-md' : 'group-hover:scale-110'}`} alt="Generated mount" />
+                                    {res.isRemovingBg && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                            <div className="w-10 h-10 border-4 border-amber-500/10 border-t-amber-500 rounded-full animate-spin"></div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-6 pt-0 space-y-3">
+                                    <div className="flex items-center justify-between bg-black-40-themed rounded-xl p-2 border border-white/5">
+                                        <span className="text-[9px] font-black text-stone-600 uppercase ml-2 tracking-widest">Krawędzie</span>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => modifyEdge(res.id, 1)} className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 text-amber-500 hover:border-amber-500 transition-all font-black" data-tooltip="Zwężaj kontur (popraw wycięcie)">-</button>
+                                            <button onClick={() => modifyEdge(res.id, -1)} className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 text-emerald-500 hover:border-emerald-500 transition-all font-black text-[10px]" data-tooltip="Przywróć oryginał">↺</button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => downloadImage(res.url, `mount_${res.id}.png`)} className="col-span-2 py-3 rounded-xl bg-amber-600/10 border border-amber-600/20 text-[10px] font-black uppercase text-amber-400 hover:bg-amber-600/20 transition-all" data-tooltip="Zapisz wierzchowca na dysku">Pobierz PNG</button>
+                                        <button onClick={() => createToken(res.url).then(u => setResults(prev => prev.map(r => r.id === res.id ? { ...r, url: u } : r)))} className="py-2.5 rounded-xl bg-stone-900 border border-stone-800 text-[9px] font-black uppercase hover:bg-white/5 transition-all text-white/50" data-tooltip="Stwórz żeton VTT">Token</button>
+                                        <button onClick={() => removeBackground(res.url, 'white').then(u => setResults(prev => prev.map(r => r.id === res.id ? { ...r, url: u } : r)))} className="py-2.5 rounded-xl bg-stone-900 border border-stone-800 text-[9px] font-black uppercase hover:bg-white/5 transition-all text-white/50" data-tooltip="Ponów usuwanie tła">Wytnij</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
